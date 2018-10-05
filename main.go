@@ -32,7 +32,6 @@ type Config struct {
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
-	IsCleanBuild      bool   `env:"is_clean_build,opt[yes,no]"`
 	OutputTool        string `env:"output_tool,opt[xcpretty,xcodebuild]"`
 	VerboseLog        bool   `env:"verbose_log,required"`
 }
@@ -125,11 +124,6 @@ func main() {
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
-
-	// set clean build
-	if cfg.IsCleanBuild {
-		xcodeBuildCmd.SetCustomBuildAction("clean")
-	}
 
 	if cfg.OutputTool == "xcpretty" {
 		xcprettyCmd := xcpretty.New(xcodeBuildCmd)
