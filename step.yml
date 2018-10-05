@@ -1,21 +1,11 @@
-#
-# A couple of useful guides & docs:
-#
-# - Main Bitrise CLI docs: https://github.com/bitrise-io/bitrise/tree/master/_docs
-# - Step Development Guideline: https://github.com/bitrise-io/bitrise/blob/master/_docs/step-development-guideline.md
-# - Bitrise.yml format spec: https://github.com/bitrise-io/bitrise/blob/master/_docs/bitrise-yml-format-spec.md
-# - Bitrise docs: http://devcenter.bitrise.io/
-# - Bitrise CLI guides: http://devcenter.bitrise.io/bitrise-cli/
+title: Xcode Build for testing for iOS
+summary: Performs xcodebuild's build-for-testing action
+description: Performs xcodebuild's build-for-testing action, to build tests without running them.
 
-title: |-
-  iOS Build for testing
-summary: |
-  Build xctestrun bundle for your project.
-description: |
-  Build xctestrun bundle for your project.
 website: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 support_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test/issues
+
 host_os_tags:
   - osx-10.10
   - ubuntu-16.04
@@ -32,10 +22,6 @@ type_tags:
 deps:
   check_only:
   - name: xcode
-  brew:
-  - name: go
-  apt_get:
-  - name: go
 
 toolkit:
   go:
@@ -65,6 +51,12 @@ inputs:
         in your Xcode Project**. If it does not, if you have a typo
         in the value of this input Xcode will simply use the Configuration
         specified by the Scheme and will silently ignore this parameter!
+  - destination: generic/platform=iOS
+    opts:
+      title: Device destination
+      description: |-
+        Specify destination to build the testes for.
+        For available values call: `man xcodebuild` and check _Destinations_ section.
       is_required: "true"
   - xcodebuild_options: ""
     opts:
@@ -81,14 +73,6 @@ inputs:
       summary: ""
       description: |-
         This directory will contain the generated .app artifacts.
-      is_required: "true"
-  - is_clean_build: "no"
-    opts:
-      category: Debug
-      title: Do a clean Xcode build before the build?
-      value_options:
-        - "yes"
-        - "no"
       is_required: "true"
   - output_tool: xcpretty
     opts:
@@ -113,7 +97,7 @@ inputs:
       - "no"
 
 outputs:
-  - BITRISE_XCTESTRUN_BUNDLE_PATH:
+  - BITRISE_TEST_BUNDLE_ZIP_PATH:
     opts:
       title: The generated *.xctestrun and app bundle zip ready for testing
   - BITRISE_XCODE_BUILD_RAW_RESULT_TEXT_PATH:
