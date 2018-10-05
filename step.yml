@@ -1,21 +1,11 @@
-#
-# A couple of useful guides & docs:
-#
-# - Main Bitrise CLI docs: https://github.com/bitrise-io/bitrise/tree/master/_docs
-# - Step Development Guideline: https://github.com/bitrise-io/bitrise/blob/master/_docs/step-development-guideline.md
-# - Bitrise.yml format spec: https://github.com/bitrise-io/bitrise/blob/master/_docs/bitrise-yml-format-spec.md
-# - Bitrise docs: http://devcenter.bitrise.io/
-# - Bitrise CLI guides: http://devcenter.bitrise.io/bitrise-cli/
+title: Xcode Build for testing
+summary: Performs xcodebuild's build-for-testing action
+description: Performs xcodebuild's build-for-testing action, to build tests without running them.
 
-title: |-
-  iOS Build for testing
-summary: |
-  Build xctestrun bundle for your project.
-description: |
-  Build xctestrun bundle for your project.
 website: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 support_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test/issues
+
 host_os_tags:
   - osx-10.10
   - ubuntu-16.04
@@ -32,10 +22,6 @@ type_tags:
 deps:
   check_only:
   - name: xcode
-  brew:
-  - name: go
-  apt_get:
-  - name: go
 
 toolkit:
   go:

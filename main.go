@@ -210,17 +210,28 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to parse PROJECT_NAME build setting: %s", err)
 	}
-	sdkVersion, err := buildSettings.String("SDK_VERSION")
-	if err != nil {
-		failf("Failed to parse SDK_VERSION build setting: %s", err)
-	}
+	// sdkVersion, err := buildSettings.String("SDK_VERSION")
+	// if err != nil {
+	// 	failf("Failed to parse SDK_VERSION build setting: %s", err)
+	// }
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
 		failf("Failed to parse CONFIGURATION build setting: %s", err)
 	}
 
-	xctestrunPth := filepath.Join(symRoot, fmt.Sprintf("%s_iphoneos%s-arm64e.xctestrun", projectName, sdkVersion))
+	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", projectName))
+	xctestrunPths, err := filepath.Glob(xctestrunPthPattern)
+	if err != nil {
+		failf("Failed to search for xctestrun file using pattern: %s, error: %s", xctestrunPthPattern, err)
+	}
+	if len(xctestrunPths) == 0 {
+		failf("No xctestrun file using with pattern: %s, error: %s", xctestrunPthPattern, err)
+	} else if len(xctestrunPths) > 1 {
+		log.Warnf("Multiple xctestrun file found, using first one:\n%s", strings.Join(xctestrunPths, "\n- "))
+	}
+
+	xctestrunPth := xctestrunPths[0]
 	if exist, err := pathutil.IsPathExists(xctestrunPth); err != nil {
 		failf("Failed to check if xctestrun file exists at: %s, error: %s", xctestrunPth, err)
 	} else if !exist {
