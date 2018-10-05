@@ -113,7 +113,7 @@ inputs:
       - "no"
 
 outputs:
-  - BITRISE_XCTESTRUN_BUNDLE_PATH:
+  - BITRISE_TEST_BUNDLE_ZIP_PATH:
     opts:
       title: The generated *.xctestrun and app bundle zip ready for testing
   - BITRISE_XCODE_BUILD_RAW_RESULT_TEXT_PATH:

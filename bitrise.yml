@@ -1,32 +1,69 @@
-format_version: 4
+format_version: 6
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
   envs:
-  # An example secret param, define it (A_SECRET_PARAM) in .bitrise.secrets.yml
-  - A_SECRET_PARAM: $A_SECRET_PARAM
-  # If you want to share this step into a StepLib
-  - BITRISE_STEP_ID: ios-build-for-testing
-  - BITRISE_STEP_VERSION: "0.9.0"
-  - BITRISE_STEP_GIT_CLONE_URL: https://github.com/bitrise-steplib/steps-xcode-build-for-test.git
-  - MY_STEPLIB_REPO_FORK_GIT_URL: $MY_STEPLIB_REPO_FORK_GIT_URL
+  - ORIG_BITRISE_SOURCE_DIR: $BITRISE_SOURCE_DIR
+  - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
 
 workflows:
   test:
     steps:
-    - path::./:
-        title: Step Test
-        description: |-
-          The example input has a default value,
-          you can overwrite it if you want to, just like we did below,
-          but the step would use the default value specified in the `step.yml`
-          file if you would not specify another value.
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            rm -rf "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+            mkdir -p "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+    - change-workdir:
+        title: Switch working dir to _tmp dir
         run_if: true
         inputs:
-        - project_path: "/Users/tamaspapik/Downloads/sample-apps-ios-multi-target-master copy/code-sign-test.xcodeproj"
+        - path: "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+        - is_create_path: true
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -e
+            set -v
+            git clone "$SAMPLE_APP_URL" .
+    - certificate-and-profile-installer:
+    - path::./:
+        title: Step Test
+        run_if: true
+        inputs:
+        - project_path: "$HOME/Develop/ios/sample-apps-ios-multi-target/code-sign-test.xcodeproj"
         - scheme: code-sign-test
-        - xcodebuild_options: "-derivedDataPath /tmp/ddp"
+        - output_tool: xcodebuild
+    - script:
+        title: Output check
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -e
+            if [[ "$BITRISE_DEPLOY_DIR/testbundle.zip" != "$BITRISE_TEST_BUNDLE_ZIP_PATH" ]] ; then 
+              echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
+              exit 1
+            else
+              echo "BITRISE_APP_DIR_PATH: $BITRISE_APP_DIR_PATH"
+            fi
 
+  dep-update:
+    title: Dep update
+    description: |
+      Used for updating bitrise dependencies with dep
+    steps:
+    - script:
+        title: Dependency update
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            go get -u -v github.com/golang/dep/cmd/dep
+            dep ensure -v
+            dep ensure -v -update
 
   # ----------------------------------------------------------------
   # --- workflows to Share this step into a Step Library
