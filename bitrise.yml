@@ -34,8 +34,8 @@ workflows:
         title: Step Test
         run_if: true
         inputs:
-        - project_path: "$HOME/Develop/ios/sample-apps-ios-multi-target/code-sign-test.xcodeproj"
-        - scheme: code-sign-test
+        - project_path: ./ios-simple-objc/ios-simple-objc.xcodeproj
+        - scheme: ios-simple-objc
         - output_tool: xcodebuild
     - script:
         title: Output check
