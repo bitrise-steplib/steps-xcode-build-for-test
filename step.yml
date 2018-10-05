@@ -1,4 +1,4 @@
-title: Xcode Build for testing
+title: Xcode Build for testing for iOS
 summary: Performs xcodebuild's build-for-testing action
 description: Performs xcodebuild's build-for-testing action, to build tests without running them.
 

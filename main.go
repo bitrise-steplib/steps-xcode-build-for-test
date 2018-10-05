@@ -213,15 +213,18 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		log.Warnf("Multiple xctestrun file found, using first one:\n%s", strings.Join(xctestrunPths, "\n- "))
 	}
 
+	// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
 	xctestrunPth := xctestrunPths[0]
-	if exist, err := pathutil.IsPathExists(xctestrunPth); err != nil {
-		failf("Failed to check if xctestrun file exists at: %s, error: %s", xctestrunPth, err)
-	} else if !exist {
-		failf("xctestrun file does not exist at: %s", xctestrunPth)
-	}
 	log.Printf("Built xctestrun path: %s", xctestrunPth)
 
-	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-iphoneos", configuration))
+	var builtForDestination string
+	if strings.Contains(xctestrunPth, fmt.Sprintf("%s_iphonesimulator", projectName)) {
+		builtForDestination = "iphonesimulator"
+	} else {
+		builtForDestination = "iphoneos"
+	}
+
+	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
 	if exist, err := pathutil.IsPathExists(builtTestDir); err != nil {
 		failf("Failed to check if built test directory exists at: %s, error: %s", builtTestDir, err)
 	} else if !exist {
