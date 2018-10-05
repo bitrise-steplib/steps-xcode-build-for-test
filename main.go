@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bitrise-io/go-utils/errorutil"
-
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
@@ -41,7 +40,6 @@ type Config struct {
 func main() {
 	//
 	// Config
-
 	var cfg Config
 	cfg.OutputTool = "xcpretty"
 	if err := stepconf.Parse(&cfg); err != nil {
@@ -71,7 +69,6 @@ func main() {
 
 	//
 	// Ensure xcpretty
-
 	// only if output tool is set to xcpretty
 	if cfg.OutputTool == "xcpretty" {
 		log.Infof("Output tool check:")
@@ -111,7 +108,6 @@ func main() {
 
 	//
 	// Build
-
 	log.Infof("Build:")
 
 	var customOptions []string
@@ -172,7 +168,6 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 
 	//
 	// Export
-
 	log.Infof("Export:")
 
 	args := []string{"xcodebuild", "-showBuildSettings"}
