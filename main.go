@@ -248,7 +248,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	log.Printf("Built test directory: %s", builtTestDir)
 
 	testBundleZipPath := filepath.Join(absOutputDir, "testbundle.zip")
-	zipCmd := command.New("zip", "-r", testBundleZipPath, builtTestDir, xctestrunPth).SetDir(symRoot)
+	zipCmd := command.New("zip", "-r", testBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)).SetDir(symRoot)
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
 		if errorutil.IsExitStatusError(err) {
 			failf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
