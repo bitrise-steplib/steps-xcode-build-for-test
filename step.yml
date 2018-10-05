@@ -51,6 +51,12 @@ inputs:
         in your Xcode Project**. If it does not, if you have a typo
         in the value of this input Xcode will simply use the Configuration
         specified by the Scheme and will silently ignore this parameter!
+  - destination: generic/platform=iOS
+    opts:
+      title: Device destination
+      description: |-
+        Specify destination to build the testes for.
+        For available values call: `man xcodebuild` and check _Destinations_ section.
       is_required: "true"
   - xcodebuild_options: ""
     opts:

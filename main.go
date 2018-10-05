@@ -28,18 +28,14 @@ const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 type Config struct {
 	ProjectPath   string `env:"project_path,required"`
 	Scheme        string `env:"scheme,required"`
-	Configuration string `env:"configuration,required"`
+	Configuration string `env:"configuration"`
+	Destination   string `env:"destination,required"`
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
 	IsCleanBuild      bool   `env:"is_clean_build,opt[yes,no]"`
 	OutputTool        string `env:"output_tool,opt[xcpretty,xcodebuild]"`
 	VerboseLog        bool   `env:"verbose_log,required"`
-}
-
-func failf(format string, v ...interface{}) {
-	log.Errorf(format, v...)
-	os.Exit(1)
 }
 
 func main() {
@@ -56,7 +52,7 @@ func main() {
 	stepconf.Print(cfg)
 	fmt.Println()
 
-	// ABS out dir pth
+	// abs out dir pth
 	absOutputDir, err := pathutil.AbsPath(cfg.OutputDir)
 	if err != nil {
 		failf("Failed to expand OutputDir (%s), error: %s", cfg.OutputDir, err)
@@ -131,7 +127,7 @@ func main() {
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
-	xcodeBuildCmd.SetDestination("generic/platform=iOS")
+	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
 
 	// set clean build
@@ -202,6 +198,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		failf("Failed to parse build settings, error: %s", err)
 	}
 
+	// The path at which all products will be placed when performing a build. Typically this path is not set per target, but is set per-project or per-user.
 	symRoot, err := buildSettings.String("SYMROOT")
 	if err != nil {
 		failf("Failed to parse SYMROOT build setting: %s", err)
@@ -210,10 +207,6 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to parse PROJECT_NAME build setting: %s", err)
 	}
-	// sdkVersion, err := buildSettings.String("SDK_VERSION")
-	// if err != nil {
-	// 	failf("Failed to parse SDK_VERSION build setting: %s", err)
-	// }
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
@@ -262,6 +255,11 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		failf("Failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %s", err)
 	}
 	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env")
+}
+
+func failf(format string, v ...interface{}) {
+	log.Errorf(format, v...)
+	os.Exit(1)
 }
 
 func parseShowBuildSettingsOutput(out string) (serialized.Object, error) {
