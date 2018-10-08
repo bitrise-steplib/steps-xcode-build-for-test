@@ -3,30 +3,26 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
   envs:
-  - ORIG_BITRISE_SOURCE_DIR: $BITRISE_SOURCE_DIR
   - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
 
 workflows:
   test:
     before_run:
     - audit-this-step
+    - go-tests
     steps:
-    - go-list:
-    - golint:
-    - errcheck:
-    - go-test:
     - script:
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            rm -rf "$ORIG_BITRISE_SOURCE_DIR/_tmp"
-            mkdir -p "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+            rm -rf "$BITRISE_SOURCE_DIR/_tmp"
+            mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
     - change-workdir:
         title: Switch working dir to _tmp dir
         run_if: true
         inputs:
-        - path: "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+        - path: "$BITRISE_SOURCE_DIR/_tmp"
         - is_create_path: true
     - script:
         inputs:
@@ -54,6 +50,13 @@ workflows:
             else
               echo "BITRISE_APP_DIR_PATH: $BITRISE_APP_DIR_PATH"
             fi
+
+  go-tests:
+    steps:
+    - go-list:
+    - golint:
+    - errcheck:
+    - go-test:
 
   dep-update:
     title: Dep update
