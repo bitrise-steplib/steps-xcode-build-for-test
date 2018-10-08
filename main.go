@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/errorutil"
@@ -125,13 +126,21 @@ func main() {
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
 
+	// save the build time frame to find the build generated artifacts
+	var buildStartTime time.Time
+	var buildEndTime time.Time
+
 	if cfg.OutputTool == "xcpretty" {
 		xcprettyCmd := xcpretty.New(xcodeBuildCmd)
 
 		log.Donef(" $ %s", xcprettyCmd.PrintableCmd())
 		fmt.Println()
 
-		if rawXcodebuildOut, err := xcprettyCmd.Run(); err != nil {
+		buildStartTime = time.Now()
+		rawXcodebuildOut, err := xcprettyCmd.Run()
+		buildEndTime = time.Now()
+
+		if err != nil {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
 
@@ -153,7 +162,11 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		buildRootCmd.SetStdout(os.Stdout)
 		buildRootCmd.SetStderr(os.Stderr)
 
-		if err := buildRootCmd.Run(); err != nil {
+		buildStartTime = time.Now()
+		err := buildRootCmd.Run()
+		buildEndTime = time.Now()
+
+		if err != nil {
 			failf("Build failed, error: %s", err)
 		}
 	}
@@ -202,21 +215,40 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		failf("Failed to parse CONFIGURATION build setting: %s", err)
 	}
 
+	// Without better solution the step collects every xctestrun files and filters them for the build time frame
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", projectName))
 	xctestrunPths, err := filepath.Glob(xctestrunPthPattern)
 	if err != nil {
 		failf("Failed to search for xctestrun file using pattern: %s, error: %s", xctestrunPthPattern, err)
 	}
+
 	if len(xctestrunPths) == 0 {
-		failf("No xctestrun file using with pattern: %s, error: %s", xctestrunPthPattern, err)
-	} else if len(xctestrunPths) > 1 {
-		log.Warnf("Multiple xctestrun file found, using first one:\n%s", strings.Join(xctestrunPths, "\n- "))
+		failf("No xctestrun file found with pattern: %s, error: %s", xctestrunPthPattern, err)
 	}
 
-	// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
-	xctestrunPth := xctestrunPths[0]
+	var buildXCTestrunPths []string
+	for _, xctestrunPth := range xctestrunPths {
+		info, err := os.Stat(xctestrunPth)
+		if err != nil {
+			failf("Failed to check %s modtime: %s", xctestrunPth, err)
+		}
+
+		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
+			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
+		}
+	}
+
+	if len(buildXCTestrunPths) == 0 {
+		failf("No xctestrun file generated during the build")
+	} else if len(buildXCTestrunPths) > 1 {
+		failf("Multiple xctestrun file generated during the build:\n%s", strings.Join(buildXCTestrunPths, "\n- "))
+	}
+
+	xctestrunPth := buildXCTestrunPths[0]
 	log.Printf("Built xctestrun path: %s", xctestrunPth)
 
+	// Without better solution the step determines the build target based on the xctestrun file name
+	// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
 	var builtForDestination string
 	if strings.Contains(xctestrunPth, fmt.Sprintf("%s_iphonesimulator", projectName)) {
 		builtForDestination = "iphonesimulator"
