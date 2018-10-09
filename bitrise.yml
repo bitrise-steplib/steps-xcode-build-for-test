@@ -47,9 +47,19 @@ workflows:
             if [[ "$BITRISE_DEPLOY_DIR/testbundle.zip" != "$BITRISE_TEST_BUNDLE_ZIP_PATH" ]] ; then 
               echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
               exit 1
-            else
-              echo "BITRISE_APP_DIR_PATH: $BITRISE_APP_DIR_PATH"
             fi
+            if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then 
+              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
+              exit 1
+            fi
+            if [[ "$BITRISE_DEPLOY_DIR/ios-simple-objc_iphoneos12.0-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
+              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/ios-simple-objc_iphoneos12.0-arm64e.xctestrun\""
+              exit 1
+            fi
+
+            echo "BITRISE_TEST_BUNDLE_ZIP_PATH: $BITRISE_TEST_BUNDLE_ZIP_PATH"
+            echo "BITRISE_TEST_DIR_PATH: $BITRISE_TEST_DIR_PATH"
+            echo "BITRISE_XCTESTRUN_FILE_PATH: $BITRISE_XCTESTRUN_FILE_PATH"
 
   go-tests:
     steps:

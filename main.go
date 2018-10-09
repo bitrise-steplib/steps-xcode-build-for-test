@@ -13,6 +13,7 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/steps-xcode-archive/utils"
+	"github.com/bitrise-tools/go-steputils/output"
 	"github.com/bitrise-tools/go-steputils/stepconf"
 	"github.com/bitrise-tools/go-steputils/tools"
 	"github.com/bitrise-tools/go-xcode/xcodebuild"
@@ -264,8 +265,8 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	}
 	log.Printf("Built test directory: %s", builtTestDir)
 
-	testBundleZipPath := filepath.Join(absOutputDir, "testbundle.zip")
-	zipCmd := command.New("zip", "-r", testBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)).SetDir(symRoot)
+	outputTestBundleZipPath := filepath.Join(absOutputDir, "testbundle.zip")
+	zipCmd := command.New("zip", "-r", outputTestBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)).SetDir(symRoot)
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
 		if errorutil.IsExitStatusError(err) {
 			failf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
@@ -273,12 +274,24 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 			failf("%s failed: %s", zipCmd.PrintableCommandArgs(), err)
 		}
 	}
-	log.Printf("Zipped test bundle: %s", testBundleZipPath)
+	log.Printf("Zipped test bundle: %s", outputTestBundleZipPath)
 
-	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", testBundleZipPath); err != nil {
+	outputXCTestrunPth := filepath.Join(absOutputDir, filepath.Base(xctestrunPth))
+	if err := output.ExportOutputFile(xctestrunPth, outputXCTestrunPth, "BITRISE_XCTESTRUN_FILE_PATH"); err != nil {
+		failf("Failed to export BITRISE_XCTESTRUN_FILE_PATH: %s", err)
+	}
+	log.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
+
+	outputTestDirPath := filepath.Join(absOutputDir, filepath.Base(builtTestDir))
+	if err := output.ExportOutputDir(builtTestDir, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
+		failf("Failed to export BITRISE_TEST_DIR_PATH: %s", err)
+	}
+	log.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
+
+	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
 		failf("Failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %s", err)
 	}
-	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env")
+	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
 }
 
 func failf(format string, v ...interface{}) {

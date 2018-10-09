@@ -97,9 +97,15 @@ inputs:
       - "no"
 
 outputs:
+  - BITRISE_TEST_DIR_PATH:
+    opts:
+      title: "Path to the built test directory (example: PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos)"
+  - BITRISE_XCTESTRUN_FILE_PATH:
+    opts:
+      title: "Path to the built xctestrun file (example: PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun)"
   - BITRISE_TEST_BUNDLE_ZIP_PATH:
     opts:
-      title: The generated *.xctestrun and app bundle zip ready for testing
+      title: "The built test directory and the built xctestrun file compressed as a single zip"
   - BITRISE_XCODE_BUILD_RAW_RESULT_TEXT_PATH:
     opts:
       title: The full, raw build output file path
