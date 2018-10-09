@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ca950e4f3bdf3150aa39117da56c34747027d6f8709ccae2473efc29ba152a0a"
+  digest = "1:e11d2bac877b9284baf9cc87c312f3d46baca7718b26f016e8afe8e56757098b"
   name = "github.com/bitrise-io/go-utils"
   packages = [
     "colorstring",
@@ -18,6 +18,7 @@
     "pkcs12/internal/rc2",
     "pointers",
     "stringutil",
+    "ziputil",
   ]
   pruneopts = "UT"
   revision = "d1de0dbcb811588e61362aff67bb700b93c13c17"
@@ -32,9 +33,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:02f962575f79cb7ab4f9352af38120e44fdb5d43708b8e7440927d3b2e408471"
+  digest = "1:ef821f1a314d0164da39e6b0a4ce1223259a45c3611ede95d5759d5d2270af5f"
   name = "github.com/bitrise-tools/go-steputils"
   packages = [
+    "output",
     "stepconf",
     "tools",
   ]
@@ -128,6 +130,7 @@
     "github.com/bitrise-io/go-utils/pathutil",
     "github.com/bitrise-io/go-utils/stringutil",
     "github.com/bitrise-io/steps-xcode-archive/utils",
+    "github.com/bitrise-tools/go-steputils/output",
     "github.com/bitrise-tools/go-steputils/stepconf",
     "github.com/bitrise-tools/go-steputils/tools",
     "github.com/bitrise-tools/go-xcode/xcodebuild",
