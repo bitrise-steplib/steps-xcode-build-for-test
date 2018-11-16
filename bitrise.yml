@@ -32,12 +32,32 @@ workflows:
             set -ev
             git clone --single-branch -b "$SAMPLE_APP_BRANCH" "$SAMPLE_APP_URL" .
     - certificate-and-profile-installer:
+    after_run:
+    - test_build_output_renamed
+    - test_build_output_spaces
+
+  test_build_output_renamed:
+    envs:
+    - SCHEME: "renamed_scheme"
+    after_run:
+    - test_build_output
+
+  test_build_output_spaces:
+    envs:
+    - SCHEME: "Scheme with spaces"
+    after_run:
+    - test_build_output
+
+  test_build_output:
+    envs:
+    - SCHEME: ${SCHEME}
+    steps:
     - path::./:
         title: Step Test
         run_if: true
         inputs:
         - project_path: ./ios-simple-objc/ios-simple-objc.xcodeproj
-        - scheme: renamed_scheme
+        - scheme: $SCHEME
         - output_tool: xcodebuild
     - script:
         title: Output check
@@ -53,8 +73,8 @@ workflows:
               echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
               exit 1
             fi
-            if [[ "$BITRISE_DEPLOY_DIR/renamed_scheme_iphoneos12.1-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
-              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/renamed_scheme_iphoneos12.1-arm64e.xctestrun\""
+            if [[ "$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos12.1-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
+              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos12.1-arm64e.xctestrun\""
               exit 1
             fi
 

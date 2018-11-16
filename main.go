@@ -191,7 +191,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	args = append(args, "build-for-testing")
 
 	cmd := command.New(args[0], args[1:]...)
-	log.Donef("=> ", cmd.PrintableCommandArgs())
+	log.Donef("\n$ %s\n", cmd.PrintableCommandArgs())
 	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		failf("%s failed, error: %s", cmd.PrintableCommandArgs(), err)
