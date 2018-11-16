@@ -4,6 +4,7 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 app:
   envs:
   - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+  - SAMPLE_APP_BRANCH: renamed-scheme
 
 workflows:
   test:
@@ -29,14 +30,14 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ev
-            git clone "$SAMPLE_APP_URL" .
+            git clone --single-branch -b "$SAMPLE_APP_BRANCH" "$SAMPLE_APP_URL" .
     - certificate-and-profile-installer:
     - path::./:
         title: Step Test
         run_if: true
         inputs:
         - project_path: ./ios-simple-objc/ios-simple-objc.xcodeproj
-        - scheme: ios-simple-objc
+        - scheme: renamed_scheme
         - output_tool: xcodebuild
     - script:
         title: Output check
@@ -52,8 +53,8 @@ workflows:
               echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
               exit 1
             fi
-            if [[ "$BITRISE_DEPLOY_DIR/ios-simple-objc_iphoneos12.0-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
-              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/ios-simple-objc_iphoneos12.0-arm64e.xctestrun\""
+            if [[ "$BITRISE_DEPLOY_DIR/renamed_scheme_iphoneos12.1-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
+              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/renamed_scheme_iphoneos12.1-arm64e.xctestrun\""
               exit 1
             fi
 
