@@ -70,7 +70,7 @@ workflows:
               exit 1
             fi
             if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then 
-              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
+              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Products\""
               exit 1
             fi
             if [[ "$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos12.1-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
