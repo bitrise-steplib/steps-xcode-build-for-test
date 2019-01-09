@@ -256,7 +256,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 
 	files, err := ioutil.ReadDir(symRoot)
 	if err != nil {
-		failf("failed to list dir, error: %s", err)
+		failf("Failed to list files in dir(%s), error: %s", symRoot, err)
 	}
 
 	for _, f := range files {
