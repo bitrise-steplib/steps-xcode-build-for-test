@@ -69,7 +69,7 @@ workflows:
               echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
               exit 1
             fi
-            if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then 
+            if [[ "$BITRISE_DEPLOY_DIR/Products" != "$BITRISE_TEST_DIR_PATH" ]] ; then 
               echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Products\""
               exit 1
             fi
