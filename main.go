@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -210,11 +211,6 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		failf("Failed to parse SYMROOT build setting: %s", err)
 	}
 
-	configuration, err := buildSettings.String("CONFIGURATION")
-	if err != nil {
-		failf("Failed to parse CONFIGURATION build setting: %s", err)
-	}
-
 	// Without better solution the step collects every xctestrun files and filters them for the build time frame
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", cfg.Scheme))
 	xctestrunPths, err := filepath.Glob(xctestrunPthPattern)
@@ -256,16 +252,23 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		builtForDestination = "iphoneos"
 	}
 
-	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
-	if exist, err := pathutil.IsPathExists(builtTestDir); err != nil {
-		failf("Failed to check if built test directory exists at: %s, error: %s", builtTestDir, err)
-	} else if !exist {
-		failf("built test directory does not exist at: %s", builtTestDir)
+	var relevantBuiltDirs []string
+
+	files, err := ioutil.ReadDir(symRoot)
+	if err != nil {
+		failf("failed to list dir, error: %s", err)
 	}
-	log.Printf("Built test directory: %s", builtTestDir)
+
+	for _, f := range files {
+		if f.IsDir() && strings.HasSuffix(f.Name(), "-"+builtForDestination) {
+			relevantBuiltDirs = append(relevantBuiltDirs, filepath.Base(f.Name()))
+		}
+	}
+
+	log.Printf("Built test directories: %v", relevantBuiltDirs)
 
 	outputTestBundleZipPath := filepath.Join(absOutputDir, "testbundle.zip")
-	zipCmd := command.New("zip", "-r", outputTestBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)).SetDir(symRoot)
+	zipCmd := command.New("zip", append([]string{"-r", outputTestBundleZipPath, filepath.Base(xctestrunPth)}, relevantBuiltDirs...)...).SetDir(symRoot)
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
 		if errorutil.IsExitStatusError(err) {
 			failf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
@@ -281,8 +284,8 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	}
 	log.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
 
-	outputTestDirPath := filepath.Join(absOutputDir, filepath.Base(builtTestDir))
-	if err := output.ExportOutputDir(builtTestDir, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
+	outputTestDirPath := filepath.Join(absOutputDir, filepath.Base(symRoot))
+	if err := output.ExportOutputDir(symRoot, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
 		failf("Failed to export BITRISE_TEST_DIR_PATH: %s", err)
 	}
 	log.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
