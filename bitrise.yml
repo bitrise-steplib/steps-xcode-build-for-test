@@ -35,16 +35,34 @@ workflows:
     after_run:
     - test_build_output_renamed
     - test_build_output_spaces
+    - test_build_output_renamed_custom_build_options
+    - test_build_output_spaces_custom_build_options
 
   test_build_output_renamed:
     envs:
     - SCHEME: "renamed_scheme"
+    - XCODE_BUILD_OPTIONS: ""
     after_run:
     - test_build_output
 
   test_build_output_spaces:
     envs:
     - SCHEME: "Scheme with spaces"
+    - XCODE_BUILD_OPTIONS: ""
+    after_run:
+    - test_build_output
+
+  test_build_output_renamed_custom_build_options:
+    envs:
+    - SCHEME: "renamed_scheme"
+    - XCODE_BUILD_OPTIONS: "-derivedDataPath ./ddata -destination generic/platform=iOS"
+    after_run:
+    - test_build_output
+
+  test_build_output_spaces_custom_build_options:
+    envs:
+    - SCHEME: "Scheme with spaces"
+    - XCODE_BUILD_OPTIONS: "-derivedDataPath ./ddata -destination generic/platform=iOS"
     after_run:
     - test_build_output
 
@@ -59,6 +77,7 @@ workflows:
         - project_path: ./ios-simple-objc/ios-simple-objc.xcodeproj
         - scheme: $SCHEME
         - output_tool: xcodebuild
+        - xcodebuild_options: $XCODE_BUILD_OPTIONS
     - script:
         title: Output check
         inputs:
