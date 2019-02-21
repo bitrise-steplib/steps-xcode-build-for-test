@@ -228,7 +228,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	}
 
 	if len(xctestrunPths) == 0 {
-		failf("No xctestrun file found with pattern: %s, error: %s", xctestrunPthPattern, err)
+		failf("No xctestrun file found with pattern: %s", xctestrunPthPattern)
 	}
 
 	var buildXCTestrunPths []string
