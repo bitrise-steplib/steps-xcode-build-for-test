@@ -179,16 +179,21 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	log.Infof("Export:")
 
 	args := []string{"xcodebuild", "-showBuildSettings"}
-	if xcworkspace.IsWorkspace(cfg.ProjectPath) {
-		args = append(args, "-workspace", cfg.ProjectPath)
-	} else {
-		args = append(args, "-project", cfg.ProjectPath)
+	{
+		if xcworkspace.IsWorkspace(cfg.ProjectPath) {
+			args = append(args, "-workspace", cfg.ProjectPath)
+		} else {
+			args = append(args, "-project", cfg.ProjectPath)
+		}
+
+		args = append(args, "-scheme", cfg.Scheme)
+		if cfg.Configuration != "" {
+			args = append(args, "-configuration", cfg.Configuration)
+		}
+
+		args = append(args, "build-for-testing")
+		args = append(args, customOptions...)
 	}
-	args = append(args, "-scheme", cfg.Scheme)
-	if cfg.Configuration != "" {
-		args = append(args, "-configuration", cfg.Configuration)
-	}
-	args = append(args, "build-for-testing")
 
 	cmd := command.New(args[0], args[1:]...)
 	fmt.Println()
@@ -223,7 +228,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	}
 
 	if len(xctestrunPths) == 0 {
-		failf("No xctestrun file found with pattern: %s, error: %s", xctestrunPthPattern, err)
+		failf("No xctestrun file found with pattern: %s", xctestrunPthPattern)
 	}
 
 	var buildXCTestrunPths []string
