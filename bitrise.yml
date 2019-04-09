@@ -92,8 +92,8 @@ workflows:
               echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
               exit 1
             fi
-            if [[ "$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos12.1-arm64e.xctestrun" != "$BITRISE_XCTESTRUN_FILE_PATH" ]] ; then 
-              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos12.1-arm64e.xctestrun\""
+            if [[ "$BITRISE_XCTESTRUN_FILE_PATH" =~ "$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos[0-9]{2}.[0-9]{1,2}-arm64e.xctestrun" ]] ; then 
+              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${SCHEME}_iphoneos{{sdk-version}}-arm64e.xctestrun\""
               exit 1
             fi
 
