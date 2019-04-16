@@ -27,10 +27,11 @@ const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 
 // Config ...
 type Config struct {
-	ProjectPath   string `env:"project_path,required"`
-	Scheme        string `env:"scheme,required"`
-	Configuration string `env:"configuration"`
-	Destination   string `env:"destination,required"`
+	ProjectPath               string `env:"project_path,required"`
+	Scheme                    string `env:"scheme,required"`
+	Configuration             string `env:"configuration"`
+	Destination               string `env:"destination,required"`
+	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
@@ -126,6 +127,7 @@ func main() {
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
+	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
 
 	// save the build time frame to find the build generated artifacts
 	var buildStartTime time.Time
