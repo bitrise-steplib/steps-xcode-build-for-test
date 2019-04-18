@@ -7,19 +7,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bitrise-io/go-steputils/output"
+	"github.com/bitrise-io/go-steputils/stepconf"
+	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
-	"github.com/bitrise-io/steps-xcode-archive/utils"
-	"github.com/bitrise-tools/go-steputils/output"
-	"github.com/bitrise-tools/go-steputils/stepconf"
-	"github.com/bitrise-tools/go-steputils/tools"
-	"github.com/bitrise-tools/go-xcode/xcodebuild"
-	"github.com/bitrise-tools/go-xcode/xcpretty"
-	"github.com/bitrise-tools/xcode-project/serialized"
-	"github.com/bitrise-tools/xcode-project/xcworkspace"
+	"github.com/bitrise-io/go-xcode/xcodebuild"
+	"github.com/bitrise-io/go-xcode/xcpretty"
+	"github.com/bitrise-io/xcode-project/serialized"
+	"github.com/bitrise-io/xcode-project/xcworkspace"
+	"github.com/bitrise-steplib/steps-xcode-archive/utils"
 	shellquote "github.com/kballard/go-shellquote"
 )
 
@@ -27,10 +27,11 @@ const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 
 // Config ...
 type Config struct {
-	ProjectPath   string `env:"project_path,required"`
-	Scheme        string `env:"scheme,required"`
-	Configuration string `env:"configuration"`
-	Destination   string `env:"destination,required"`
+	ProjectPath               string `env:"project_path,required"`
+	Scheme                    string `env:"scheme,required"`
+	Configuration             string `env:"configuration"`
+	Destination               string `env:"destination,required"`
+	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
@@ -126,6 +127,7 @@ func main() {
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
+	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
 
 	// save the build time frame to find the build generated artifacts
 	var buildStartTime time.Time
