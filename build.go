@@ -8,13 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcpretty"
-	"github.com/bitrise-steplib/steps-xcode-build-for-simulator/util"
 )
 
 type timeInterval struct {
@@ -29,7 +27,7 @@ func runCommandWithRetry(cmd *xcodebuild.CommandBuilder, useXcpretty bool, swift
 	buildInterval.end = time.Now()
 	if err != nil && swiftPackagesPath != "" && strings.Contains(output, cache.SwiftPackagesStateInvalid) {
 		log.Warnf("Build failed, swift packages cache is in an invalid state, error: %s", err)
-		log.RWarnf("xcode-build-for-simulator", "swift-packages-cache-invalid", nil, "swift packages cache is in an invalid state")
+		log.RWarnf("xcode-build-for-test", "swift-packages-cache-invalid", nil, "swift packages cache is in an invalid state")
 		if err := os.RemoveAll(swiftPackagesPath); err != nil {
 			return output, buildInterval, fmt.Errorf("failed to remove invalid Swift package caches, error: %s", err)
 		}
@@ -55,7 +53,7 @@ func runCommand(buildCmd *xcodebuild.CommandBuilder, useXcpretty bool) (string, 
 	var buildInterval timeInterval
 
 	if xcprettyCmd != nil {
-		util.LogWithTimestamp(colorstring.Green, "$ %s", xcprettyCmd.PrintableCmd())
+		log.Donef(" $ %s", xcprettyCmd.PrintableCmd())
 		fmt.Println()
 
 		buildInterval.start = time.Now()
@@ -63,7 +61,7 @@ func runCommand(buildCmd *xcodebuild.CommandBuilder, useXcpretty bool) (string, 
 		buildInterval.end = time.Now()
 		return output, buildInterval, err
 	}
-	util.LogWithTimestamp(colorstring.Green, "$ %s", xcodebuildCmd.PrintableCommandArgs())
+	log.Donef("$ %s", xcodebuildCmd.PrintableCommandArgs())
 	fmt.Println()
 
 	buildInterval.start = time.Now()
