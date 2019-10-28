@@ -52,6 +52,11 @@ func main() {
 	stepconf.Print(cfg)
 	fmt.Println()
 
+	absProjectPath, err := filepath.Abs(cfg.ProjectPath)
+	if err != nil {
+		failf("Failed to expand ProjectPath (%s), error: %s", cfg.ProjectPath, err)
+	}
+
 	// abs out dir pth
 	absOutputDir, err := pathutil.AbsPath(cfg.OutputDir)
 	if err != nil {
@@ -121,7 +126,7 @@ func main() {
 		}
 	}
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
@@ -182,10 +187,10 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 
 	args := []string{"xcodebuild", "-showBuildSettings"}
 	{
-		if xcworkspace.IsWorkspace(cfg.ProjectPath) {
-			args = append(args, "-workspace", cfg.ProjectPath)
+		if xcworkspace.IsWorkspace(absProjectPath) {
+			args = append(args, "-workspace", absProjectPath)
 		} else {
-			args = append(args, "-project", cfg.ProjectPath)
+			args = append(args, "-project", absProjectPath)
 		}
 
 		args = append(args, "-scheme", cfg.Scheme)
