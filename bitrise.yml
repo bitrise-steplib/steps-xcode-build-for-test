@@ -3,36 +3,34 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
   envs:
-  - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
-  - SAMPLE_APP_BRANCH: renamed-scheme
+  - ORIG_BITRISE_SOURCE_DIR: $BITRISE_SOURCE_DIR
 
 workflows:
   test:
     before_run:
     - audit-this-step
     - go-tests
-    steps:
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            rm -rf "$BITRISE_SOURCE_DIR/_tmp"
-            mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
-    - change-workdir:
-        title: Switch working dir to _tmp dir
-        run_if: true
-        inputs:
-        - path: "$BITRISE_SOURCE_DIR/_tmp"
-        - is_create_path: true
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ev
-            git clone --single-branch -b "$SAMPLE_APP_BRANCH" "$SAMPLE_APP_URL" .
-    - certificate-and-profile-installer:
     after_run:
+    - test_objc_all
+    - test_swiftpm
+
+  test_swiftpm:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
+    - SAMPLE_APP_BRANCH: master
+    - PROJECT_PATH: sample-swiftpm.xcodeproj
+    - SCHEME: "sample swiftpm"
+    after_run:
+    - _checkout
+    - _run_and_test_output
+
+  test_objc_all:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme 
+    - PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    after_run:
+    - _checkout
     - test_build_output_renamed
     - test_build_output_spaces
     - test_build_output_renamed_custom_build_options
@@ -42,42 +40,75 @@ workflows:
     envs:
     - SCHEME: "renamed_scheme"
     - XCODE_BUILD_OPTIONS: ""
+    - PROJECT_PATH: $PROJECT_PATH
     after_run:
-    - test_build_output
+    - _run_and_test_output
 
   test_build_output_spaces:
     envs:
     - SCHEME: "Scheme with spaces"
     - XCODE_BUILD_OPTIONS: ""
+    - PROJECT_PATH: $PROJECT_PATH
     after_run:
-    - test_build_output
+    - _run_and_test_output
 
   test_build_output_renamed_custom_build_options:
     envs:
     - SCHEME: "renamed_scheme"
     - XCODE_BUILD_OPTIONS: "-derivedDataPath ./ddata -destination generic/platform=iOS"
+    - PROJECT_PATH: $PROJECT_PATH
     after_run:
-    - test_build_output
+    - _run_and_test_output
 
   test_build_output_spaces_custom_build_options:
     envs:
     - SCHEME: "Scheme with spaces"
     - XCODE_BUILD_OPTIONS: "-derivedDataPath ./ddata -destination generic/platform=iOS"
+    - PROJECT_PATH: $PROJECT_PATH
     after_run:
-    - test_build_output
+    - _run_and_test_output
 
-  test_build_output:
+  _run_and_test_output:
     envs:
-    - SCHEME: ${SCHEME}
+    - SCHEME: $SCHEME
+    - PROJECT_PATH: $PROJECT_PATH
     steps:
     - path::./:
         title: Step Test
         run_if: true
         inputs:
-        - project_path: ./ios-simple-objc/ios-simple-objc.xcodeproj
+        - project_path: $PROJECT_PATH
         - scheme: $SCHEME
         - output_tool: xcodebuild
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
+    after_run:
+    - _output_test
+
+  _checkout:
+    steps:
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            rm -rf "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+            mkdir -p "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+    - change-workdir:
+        title: Switch working dir to _tmp dir
+        run_if: true
+        inputs:
+        - path: "$ORIG_BITRISE_SOURCE_DIR/_tmp"
+        - is_create_path: true
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ev
+            git clone --single-branch -b "$SAMPLE_APP_BRANCH" "$SAMPLE_APP_URL" .
+    - certificate-and-profile-installer:
+
+  _output_test:
+    steps:
     - script:
         title: Output check
         inputs:

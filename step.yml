@@ -78,6 +78,17 @@ inputs:
       value_options:
         - "yes"
         - "no"
+  - cache_level: swift_packages
+    opts:
+      title: Enable caching of Swift Package Manager packages
+      description: |-
+        Available options:
+        - `none` : Disable caching
+        - `swift_packages` : Cache Swift PM packages added to the Xcode project
+      value_options:
+      - "none"
+      - "swift_packages"
+      is_required: "true"
   - xcodebuild_options: ""
     opts:
       category: Debug

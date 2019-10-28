@@ -33,6 +33,7 @@ type Config struct {
 	Configuration             string `env:"configuration"`
 	Destination               string `env:"destination,required"`
 	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
+	CacheLevel                string `env:"cache_level,opt[none,swift_packages]"`
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
@@ -292,6 +293,14 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
 		failf("Failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %s", err)
 	}
+
+	// Cache swift PM
+	if xcodebuildVersion.MajorVersion >= 11 && cfg.CacheLevel == "swift_packages" {
+		if err := cache.CollectSwiftPackages(absProjectPath); err != nil {
+			log.Warnf("Failed to mark swift packages for caching, error: %s", err)
+		}
+	}
+
 	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
 }
 
