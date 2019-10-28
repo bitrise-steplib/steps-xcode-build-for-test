@@ -12,7 +12,6 @@ workflows:
     - go-tests
     after_run:
     - test_objc_all
-    - test_swiftpm
 
   test_swiftpm:
     envs:
