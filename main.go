@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/bitrise-io/go-steputils/output"
 	"github.com/bitrise-io/go-steputils/stepconf"
@@ -15,7 +14,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
+	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcpretty"
 	"github.com/bitrise-io/xcode-project/serialized"
 	"github.com/bitrise-io/xcode-project/xcworkspace"
@@ -113,6 +114,21 @@ func main() {
 		fmt.Println()
 	}
 
+	// Detect Xcode major version
+	xcodebuildVersion, err := utility.GetXcodeVersion()
+	if err != nil {
+		failf("Failed to determin xcode version, error: %s", err)
+	}
+	log.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+
+	var swiftPackagesPath string
+	if xcodebuildVersion.MajorVersion >= 11 {
+		var err error
+		if swiftPackagesPath, err = cache.SwiftPackagesPath(absProjectPath); err != nil {
+			failf("Failed to get Swift Packages path, error: %s", err)
+		}
+	}
+
 	//
 	// Build
 	log.Infof("Build:")
@@ -135,20 +151,11 @@ func main() {
 	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
 
 	// save the build time frame to find the build generated artifacts
-	var buildStartTime time.Time
-	var buildEndTime time.Time
+	var buildInterval timeInterval
 
-	if cfg.OutputTool == "xcpretty" {
-		xcprettyCmd := xcpretty.New(xcodeBuildCmd)
-
-		log.Donef(" $ %s", xcprettyCmd.PrintableCmd())
-		fmt.Println()
-
-		buildStartTime = time.Now()
-		rawXcodebuildOut, err := xcprettyCmd.Run()
-		buildEndTime = time.Now()
-
-		if err != nil {
+	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.OutputTool == "xcpretty", swiftPackagesPath)
+	if err != nil {
+		if cfg.OutputTool == "xcpretty" {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
 
@@ -159,26 +166,9 @@ func main() {
 The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in the $%s environment variable
 (value: %s)`, filepath.Base(rawXcodebuildOutputLogPath), bitriseXcodeRawResultTextEnvKey, rawXcodebuildOutputLogPath)
 			}
-
-			failf("Build failed, error: %s", err)
 		}
-	} else {
-		log.Donef(" $ %s", xcodeBuildCmd.PrintableCmd())
-		fmt.Println()
-
-		buildRootCmd := xcodeBuildCmd.Command()
-		buildRootCmd.SetStdout(os.Stdout)
-		buildRootCmd.SetStderr(os.Stderr)
-
-		buildStartTime = time.Now()
-		err := buildRootCmd.Run()
-		buildEndTime = time.Now()
-
-		if err != nil {
-			failf("Build failed, error: %s", err)
-		}
+		failf("Build failed, error: %s", err)
 	}
-
 	fmt.Println()
 
 	//
@@ -245,7 +235,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 			failf("Failed to check %s modtime: %s", xctestrunPth, err)
 		}
 
-		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
+		if !info.ModTime().Before(buildInterval.start) && !info.ModTime().After(buildInterval.end) {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
 		}
 	}
