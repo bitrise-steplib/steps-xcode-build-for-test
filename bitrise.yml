@@ -106,8 +106,6 @@ workflows:
             set -ev
             git clone --single-branch -b "$SAMPLE_APP_BRANCH" "$SAMPLE_APP_URL" .
     - certificate-and-profile-installer:
-        inputs:
-        - install_defaults: 'no'
 
   _output_test:
     steps:
