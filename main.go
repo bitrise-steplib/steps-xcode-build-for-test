@@ -45,7 +45,6 @@ func main() {
 	//
 	// Config
 	var cfg Config
-	cfg.OutputTool = "xcpretty"
 	if err := stepconf.Parse(&cfg); err != nil {
 		failf("Issue with input: %s", err)
 	}

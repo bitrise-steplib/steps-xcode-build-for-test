@@ -6,10 +6,6 @@ website: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 support_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test/issues
 
-host_os_tags:
-  - osx-10.10
-  - ubuntu-16.04
-
 project_type_tags:
   - ios
   - react-native
@@ -33,13 +29,13 @@ inputs:
       title: Project (or Workspace) path
       summary: "A `.xcodeproj` or `.xcworkspace` path."
       description: "A `.xcodeproj` or `.xcworkspace` path."
-      is_required: "true"
+      is_required: true
   - scheme: $BITRISE_SCHEME
     opts:
       title: Scheme name
       summary: "The Scheme to use."
       description: "The Scheme to use."
-      is_required: "true"
+      is_required: true
   - configuration: Debug
     opts:
       title: "Configuration name"
@@ -57,7 +53,7 @@ inputs:
       description: |-
         Specify destination to build the testes for.
         For available values call: `man xcodebuild` and check _Destinations_ section.
-      is_required: "true"
+      is_required: true
   - disable_index_while_building: "yes"
     opts:
       title: Disable indexing during the build
@@ -88,7 +84,7 @@ inputs:
       value_options:
       - "none"
       - "swift_packages"
-      is_required: "true"
+      is_required: true
   - xcodebuild_options: ""
     opts:
       category: Debug
@@ -104,7 +100,7 @@ inputs:
       summary: ""
       description: |-
         This directory will contain the generated .app artifacts.
-      is_required: "true"
+      is_required: true
   - output_tool: xcpretty
     opts:
       category: Debug
@@ -115,14 +111,14 @@ inputs:
       value_options:
       - xcpretty
       - xcodebuild
-      is_required: "true"
-      is_expand: "false"
+      is_required: true
+      is_expand: false
   - verbose_log: "no"
     opts:
       category: Debug
       title: Enable verbose logging?
       description: Enable verbose logging?
-      is_required: "true"
+      is_required: true
       value_options:
       - "yes"
       - "no"
