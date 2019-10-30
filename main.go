@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/bitrise-io/go-steputils/output"
 	"github.com/bitrise-io/go-steputils/stepconf"
@@ -15,7 +14,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
+	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcpretty"
 	"github.com/bitrise-io/xcode-project/serialized"
 	"github.com/bitrise-io/xcode-project/xcworkspace"
@@ -32,6 +33,7 @@ type Config struct {
 	Configuration             string `env:"configuration"`
 	Destination               string `env:"destination,required"`
 	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
+	CacheLevel                string `env:"cache_level,opt[none,swift_packages]"`
 
 	XcodebuildOptions string `env:"xcodebuild_options"`
 	OutputDir         string `env:"output_dir,required"`
@@ -43,7 +45,6 @@ func main() {
 	//
 	// Config
 	var cfg Config
-	cfg.OutputTool = "xcpretty"
 	if err := stepconf.Parse(&cfg); err != nil {
 		failf("Issue with input: %s", err)
 	}
@@ -51,6 +52,11 @@ func main() {
 
 	stepconf.Print(cfg)
 	fmt.Println()
+
+	absProjectPath, err := filepath.Abs(cfg.ProjectPath)
+	if err != nil {
+		failf("Failed to expand ProjectPath (%s), error: %s", cfg.ProjectPath, err)
+	}
 
 	// abs out dir pth
 	absOutputDir, err := pathutil.AbsPath(cfg.OutputDir)
@@ -108,6 +114,21 @@ func main() {
 		fmt.Println()
 	}
 
+	// Detect Xcode major version
+	xcodebuildVersion, err := utility.GetXcodeVersion()
+	if err != nil {
+		failf("Failed to determin xcode version, error: %s", err)
+	}
+	log.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+
+	var swiftPackagesPath string
+	if xcodebuildVersion.MajorVersion >= 11 {
+		var err error
+		if swiftPackagesPath, err = cache.SwiftPackagesPath(absProjectPath); err != nil {
+			failf("Failed to get Swift Packages path, error: %s", err)
+		}
+	}
+
 	//
 	// Build
 	log.Infof("Build:")
@@ -121,7 +142,7 @@ func main() {
 		}
 	}
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
@@ -130,20 +151,11 @@ func main() {
 	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
 
 	// save the build time frame to find the build generated artifacts
-	var buildStartTime time.Time
-	var buildEndTime time.Time
+	var buildInterval timeInterval
 
-	if cfg.OutputTool == "xcpretty" {
-		xcprettyCmd := xcpretty.New(xcodeBuildCmd)
-
-		log.Donef(" $ %s", xcprettyCmd.PrintableCmd())
-		fmt.Println()
-
-		buildStartTime = time.Now()
-		rawXcodebuildOut, err := xcprettyCmd.Run()
-		buildEndTime = time.Now()
-
-		if err != nil {
+	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.OutputTool == "xcpretty", swiftPackagesPath)
+	if err != nil {
+		if cfg.OutputTool == "xcpretty" {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
 
@@ -154,26 +166,9 @@ func main() {
 The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in the $%s environment variable
 (value: %s)`, filepath.Base(rawXcodebuildOutputLogPath), bitriseXcodeRawResultTextEnvKey, rawXcodebuildOutputLogPath)
 			}
-
-			failf("Build failed, error: %s", err)
 		}
-	} else {
-		log.Donef(" $ %s", xcodeBuildCmd.PrintableCmd())
-		fmt.Println()
-
-		buildRootCmd := xcodeBuildCmd.Command()
-		buildRootCmd.SetStdout(os.Stdout)
-		buildRootCmd.SetStderr(os.Stderr)
-
-		buildStartTime = time.Now()
-		err := buildRootCmd.Run()
-		buildEndTime = time.Now()
-
-		if err != nil {
-			failf("Build failed, error: %s", err)
-		}
+		failf("Build failed, error: %s", err)
 	}
-
 	fmt.Println()
 
 	//
@@ -182,10 +177,10 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 
 	args := []string{"xcodebuild", "-showBuildSettings"}
 	{
-		if xcworkspace.IsWorkspace(cfg.ProjectPath) {
-			args = append(args, "-workspace", cfg.ProjectPath)
+		if xcworkspace.IsWorkspace(absProjectPath) {
+			args = append(args, "-workspace", absProjectPath)
 		} else {
-			args = append(args, "-project", cfg.ProjectPath)
+			args = append(args, "-project", absProjectPath)
 		}
 
 		args = append(args, "-scheme", cfg.Scheme)
@@ -240,7 +235,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 			failf("Failed to check %s modtime: %s", xctestrunPth, err)
 		}
 
-		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
+		if !info.ModTime().Before(buildInterval.start) && !info.ModTime().After(buildInterval.end) {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
 		}
 	}
@@ -297,6 +292,14 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
 		failf("Failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %s", err)
 	}
+
+	// Cache swift PM
+	if xcodebuildVersion.MajorVersion >= 11 && cfg.CacheLevel == "swift_packages" {
+		if err := cache.CollectSwiftPackages(absProjectPath); err != nil {
+			log.Warnf("Failed to mark swift packages for caching, error: %s", err)
+		}
+	}
+
 	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
 }
 
