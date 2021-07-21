@@ -1,7 +1,7 @@
 title: "[BETA] Xcode Build for testing for iOS"
 summary: Performs xcodebuild's build-for-testing action
 description: |- 
-  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` flag. This builds your app for testing and also creates an `.xctestrun` file. 
+  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file. 
   
   ### Configuring the Step 
   
@@ -10,6 +10,7 @@ description: |-
   - **Project (or Workspace) path**: This is the path to the `.xcodeproj` or `.xcworkspace` file. In most cases, leave it on the default value.
   - **Scheme name**: The name of your Xcode scheme. By default, the Step will use the scheme that was set when you added the app on Bitrise.
   - **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section. 
+  We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools. 
   
   Optionally, you can define the configuration to use in the **Configuration name** input. Normally, the scheme defines the configuration type, such as **debug** or **release**.
   
@@ -84,7 +85,7 @@ inputs:
       title: Device destination
       description: |-
         Specify destination to build the testes for.
-        For available values call: `man xcodebuild` and check _Destinations_ section.
+        For available values call: `man xcodebuild` and check the _Destinations_ section.
       is_required: true
   - disable_index_while_building: "yes"
     opts:
