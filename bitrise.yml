@@ -27,7 +27,7 @@ workflows:
   test_objc_all:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
-    - SAMPLE_APP_BRANCH: bitrise_bot_signing
+    - SAMPLE_APP_BRANCH: renamed-scheme
     - PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     after_run:
     - _checkout
