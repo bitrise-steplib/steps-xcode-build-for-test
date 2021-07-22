@@ -17,9 +17,8 @@ workflows:
   test_swiftpm:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
-    - SAMPLE_APP_BRANCH: 
+    - SAMPLE_APP_BRANCH: codesign-update
     - PROJECT_PATH: sample-swiftpm.xcodeproj
-    - SAMPLE_APP_COMMIT: 5fba30bd4e99e48c042ff575a6754b21b2521b50
     - SCHEME: "sample swiftpm"
     after_run:
     - _checkout
