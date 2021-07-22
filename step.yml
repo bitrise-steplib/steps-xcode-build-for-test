@@ -1,6 +1,39 @@
 title: "[BETA] Xcode Build for testing for iOS"
 summary: Performs xcodebuild's build-for-testing action
-description: Performs xcodebuild's build-for-testing action, to build tests without running them.
+description: |- 
+  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file. 
+  
+  ### Configuring the Step 
+  
+  At a minimum, the Step needs valid values for three inputs:
+  
+  - **Project (or Workspace) path**: This is the path to the `.xcodeproj` or `.xcworkspace` file. In most cases, leave it on the default value.
+  - **Scheme name**: The name of your Xcode scheme. By default, the Step will use the scheme that was set when you added the app on Bitrise.
+  - **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section. 
+  We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools. 
+  
+  Optionally, you can define the configuration to use in the **Configuration name** input. Normally, the scheme defines the configuration type, such as **debug** or **release**.
+  
+  The Step can also cache your Swift PM dependencies. To enable caching, make sure the **Enable caching of Swift Package Manager packages** input is set to `swift_packages`.
+  
+  ### Troubleshooting
+  
+  In the **Debug** option group, you can:
+  
+  - Add additional flags to the `xcodebuild` command. 
+  - Enable verbose logging.
+  - Change the output directory path and the output tool.
+  
+  ### Useful links
+  
+  - [Running Xcode tests](https://devcenter.bitrise.io/testing/running-xcode-tests/)
+  - [Building from the Command Line with Xcode](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
+  
+  ### Related Steps 
+  
+  - [Xcode Test for iOS](https://www.bitrise.io/integrations/steps/xcode-test)
+  - [Xcode Analyze](https://www.bitrise.io/integrations/steps/xcode-analyze)
+ 
 
 website: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
@@ -52,7 +85,7 @@ inputs:
       title: Device destination
       description: |-
         Specify destination to build the testes for.
-        For available values call: `man xcodebuild` and check _Destinations_ section.
+        For available values call: `man xcodebuild` and check the _Destinations_ section.
       is_required: true
   - disable_index_while_building: "yes"
     opts:
