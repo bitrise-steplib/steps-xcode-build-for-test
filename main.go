@@ -10,6 +10,7 @@ import (
 	"github.com/bitrise-io/go-steputils/stepconf"
 	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/env"
 	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
@@ -17,11 +18,10 @@ import (
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
+	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	"github.com/bitrise-io/go-xcode/xcpretty"
-	"github.com/bitrise-io/xcode-project/serialized"
-	"github.com/bitrise-io/xcode-project/xcworkspace"
-	"github.com/bitrise-steplib/steps-xcode-archive/utils"
-	shellquote "github.com/kballard/go-shellquote"
+	"github.com/kballard/go-shellquote"
 )
 
 const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
@@ -45,7 +45,8 @@ func main() {
 	//
 	// Config
 	var cfg Config
-	if err := stepconf.Parse(&cfg); err != nil {
+	parser := stepconf.NewInputParser(env.NewRepository())
+	if err := parser.Parse(&cfg); err != nil {
 		failf("Issue with input: %s", err)
 	}
 	log.SetEnableDebugLog(cfg.VerboseLog)
@@ -115,7 +116,8 @@ func main() {
 	}
 
 	// Detect Xcode major version
-	xcodebuildVersion, err := utility.GetXcodeVersion()
+	factory := command.NewFactory(env.NewRepository())
+	xcodebuildVersion, err := utility.GetXcodeVersion(factory)
 	if err != nil {
 		failf("Failed to determin xcode version, error: %s", err)
 	}
@@ -142,7 +144,7 @@ func main() {
 		}
 	}
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "")
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "", factory)
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
@@ -158,8 +160,7 @@ func main() {
 		if cfg.OutputTool == "xcpretty" {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
-
-			if err := utils.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
+			if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
 				log.Warnf("Failed to export %s, error: %s", bitriseXcodeRawResultTextEnvKey, err)
 			} else {
 				log.Warnf(`You can find the last couple of lines of Xcode's build log above, but the full log is also available in the %s
@@ -192,7 +193,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 		args = append(args, customOptions...)
 	}
 
-	cmd := command.New(args[0], args[1:]...)
+	cmd := factory.Create(args[0], args[1:], nil)
 	fmt.Println()
 	log.Donef("$ %s", cmd.PrintableCommandArgs())
 	fmt.Println()
@@ -267,7 +268,9 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	log.Printf("Built test directory: %s", builtTestDir)
 
 	outputTestBundleZipPath := filepath.Join(absOutputDir, "testbundle.zip")
-	zipCmd := command.New("zip", "-r", outputTestBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)).SetDir(symRoot)
+	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)}, &command.Opts{
+		Dir: symRoot,
+	})
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
 		if errorutil.IsExitStatusError(err) {
 			failf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
