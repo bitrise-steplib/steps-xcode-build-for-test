@@ -1,4 +1,4 @@
-title: "[BETA] Xcode Build for testing for iOS"
+title: "Xcode Build for testing for iOS"
 summary: Performs xcodebuild's build-for-testing action
 description: |- 
   The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file. 
