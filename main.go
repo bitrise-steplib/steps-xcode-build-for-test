@@ -28,17 +28,24 @@ const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 
 // Config ...
 type Config struct {
-	ProjectPath               string `env:"project_path,required"`
-	Scheme                    string `env:"scheme,required"`
-	Configuration             string `env:"configuration"`
-	Destination               string `env:"destination,required"`
-	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
-	CacheLevel                string `env:"cache_level,opt[none,swift_packages]"`
+	ProjectPath   string `env:"project_path,required"`
+	Scheme        string `env:"scheme,required"`
+	Configuration string `env:"configuration"`
+	Destination   string `env:"destination,required"`
 
+	XCConfigContent   string `env:"xcconfig_content"`
 	XcodebuildOptions string `env:"xcodebuild_options"`
-	OutputDir         string `env:"output_dir,required"`
-	OutputTool        string `env:"output_tool,opt[xcpretty,xcodebuild]"`
-	VerboseLog        bool   `env:"verbose_log,required"`
+
+	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
+
+	OutputDir string `env:"output_dir,required"`
+
+	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
+
+	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
+
+	// TODO: handle DisableIndexWhileBuilding -> XCConfigContent
+	// DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
 }
 
 func main() {
@@ -79,13 +86,13 @@ func main() {
 	//
 	// Ensure xcpretty
 	// only if output tool is set to xcpretty
-	if cfg.OutputTool == "xcpretty" {
+	if cfg.LogFormatter == "xcpretty" {
 		log.Infof("Output tool check:")
 
 		// check if already installed
 		if installed, err := xcpretty.IsInstalled(); err != nil {
 			log.Warnf(" Failed to check if xcpretty is installed, error: %s", err)
-			cfg.OutputTool = "xcodebuild"
+			cfg.LogFormatter = "xcodebuild"
 		} else if !installed {
 			log.Warnf(` xcpretty is not installed`)
 			log.Printf(" Installing...")
@@ -93,13 +100,13 @@ func main() {
 			// install if not installed
 			if cmds, err := xcpretty.Install(); err != nil {
 				log.Warnf(" Failed to install xcpretty, error: %s", err)
-				cfg.OutputTool = "xcodebuild"
+				cfg.LogFormatter = "xcodebuild"
 			} else {
 				for _, cmd := range cmds {
 					log.Donef(" $ %s", cmd.PrintableCommandArgs())
 					if err := cmd.Run(); err != nil {
 						log.Warnf(" Failed to install xcpretty, error: %s", err)
-						cfg.OutputTool = "xcodebuild"
+						cfg.LogFormatter = "xcodebuild"
 						break
 					}
 				}
@@ -109,7 +116,7 @@ func main() {
 			log.Donef(` xcpretty is installed`)
 		}
 		// warn user if we needed to switch back from xcpretty
-		if cfg.OutputTool != "xcpretty" {
+		if cfg.LogFormatter != "xcpretty" {
 			log.Warnf(" Switching output tool to xcodebuild")
 		}
 		fmt.Println()
@@ -150,14 +157,15 @@ func main() {
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
-	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
+	// TODO: handle new XCConfigContent input
+	//xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
 
 	// save the build time frame to find the build generated artifacts
 	var buildInterval timeInterval
 
-	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.OutputTool == "xcpretty", swiftPackagesPath)
+	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.LogFormatter == "xcpretty", swiftPackagesPath)
 	if err != nil {
-		if cfg.OutputTool == "xcpretty" {
+		if cfg.LogFormatter == "xcpretty" {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
 			if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
