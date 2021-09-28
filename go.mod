@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/bitrise-io/go-steputils v0.0.0-20210924114124-851d30b88892
 	github.com/bitrise-io/go-utils v0.0.0-20210924090918-3e7a04d0da9d
-	github.com/bitrise-io/go-xcode v0.0.0-20210927150020-dd11ae1c9008
+	github.com/bitrise-io/go-xcode v0.0.0-20210928140350-ec12eb8661c0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	golang.org/x/text v0.3.7 // indirect
 )

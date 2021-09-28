@@ -12,6 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/env"
 	"github.com/bitrise-io/go-utils/errorutil"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
@@ -43,9 +44,6 @@ type Config struct {
 	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
 
 	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
-
-	// TODO: handle DisableIndexWhileBuilding -> XCConfigContent
-	// DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
 }
 
 func main() {
@@ -151,14 +149,26 @@ func main() {
 		}
 	}
 
+	var xcconfigPath string
+	if cfg.XCConfigContent != "" {
+		dir, err := pathutil.NewPathProvider().CreateTempDir("")
+		if err != nil {
+			failf("Unable to create temp dir for writing XCConfig: %s", err)
+		}
+		xcconfigPath = filepath.Join(dir, "temp.xcconfig")
+
+		if err = fileutil.NewFileManager().Write(xcconfigPath, cfg.XCConfigContent, 0644); err != nil {
+			failf("unable to write XCConfig content into file: %s", err, err)
+		}
+	}
+
 	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "", factory)
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
-	// TODO: handle new XCConfigContent input
-	//xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
+	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
 
 	// save the build time frame to find the build generated artifacts
 	var buildInterval timeInterval
