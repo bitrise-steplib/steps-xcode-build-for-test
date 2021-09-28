@@ -59,102 +59,127 @@ toolkit:
 inputs:
   - project_path: $BITRISE_PROJECT_PATH
     opts:
-      title: Project (or Workspace) path
-      summary: "A `.xcodeproj` or `.xcworkspace` path."
-      description: "A `.xcodeproj` or `.xcworkspace` path."
+      title: Project path
+      summary: Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
+      description: |-
+        Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
+
+        The input value sets xcodebuild's `-project` or `-workspace` option.
       is_required: true
+
   - scheme: $BITRISE_SCHEME
     opts:
-      title: Scheme name
-      summary: "The Scheme to use."
-      description: "The Scheme to use."
-      is_required: true
-  - configuration: Debug
-    opts:
-      title: "Configuration name"
+      title: Scheme
+      summary: Xcode Scheme name.
       description: |-
-        (optional) The configuration to use. By default your Scheme
-        defines which configuration (Debug, Release, ...) should be used,
-        but you can overwrite it with this option.
-        **Make sure that the Configuration you specify actually exists
-        in your Xcode Project**. If it does not, if you have a typo
-        in the value of this input Xcode will simply use the Configuration
-        specified by the Scheme and will silently ignore this parameter!
+        Xcode Scheme name.
+
+        The input value sets xcodebuild's `-scheme` option.
+      is_required: true
+
+  - configuration:
+    opts:
+      title: Build Configuration
+      summary: Xcode Build Configuration.
+      description: |-
+        Xcode Build Configuration.
+
+        If not specified, the default Build Configuration will be used.
+
+        The input value sets xcodebuild's `-configuration` option.
+
   - destination: generic/platform=iOS
     opts:
-      title: Device destination
+      title: Device destination specifier
+      summary: Destination specifier describes the device to use as a destination.
       description: |-
-        Specify destination to build the testes for.
-        For available values call: `man xcodebuild` and check the _Destinations_ section.
+        Destination specifier describes the device to use as a destination.
+
+        The input value sets xcodebuild's `-destination` option.
       is_required: true
-  - disable_index_while_building: "yes"
+
+  # xcodebuild configuration
+
+  - xcconfig_content: "COMPILER_INDEX_STORE_ENABLE = NO"
     opts:
-      title: Disable indexing during the build
-      summary: Could make the build faster by disabling the indexing during the build run.
+      category: xcodebuild configuration
+      title: Build settings
+      summary: Build settings to override the project's build settings.
       description: |-
-        Could make the build faster by adding `COMPILER_INDEX_STORE_ENABLE=NO` flag to the `xcodebuild` command which will disable the indexing during the build.
+        Build settings to override the project's build settings.
 
-        Indexing is needed for
-        
-        * Autocomplete
-        * Ability to quickly jump to definition
-        * Get class and method help by alt clicking.
+        The input value sets xcodebuild's `-xcconfig` option.
 
-        Which are not needed in CI environment.
-
-        **Note:** In Xcode you can turn off the `Index-WhileBuilding` feature  by disabling the `Enable Index-WhileBuilding Functionality` in the `Build Settings`.<br/>
-        In CI environment you can disable it by adding `COMPILER_INDEX_STORE_ENABLE=NO` flag to the `xcodebuild` command.
-      value_options:
-        - "yes"
-        - "no"
-  - cache_level: swift_packages
-    opts:
-      title: Enable caching of Swift Package Manager packages
-      description: |-
-        Available options:
-        - `none` : Disable caching
-        - `swift_packages` : Cache Swift PM packages added to the Xcode project
-      value_options:
-      - "none"
-      - "swift_packages"
-      is_required: true
   - xcodebuild_options: ""
     opts:
-      category: Debug
-      title: Additional options for xcodebuild call
+      category: xcodebuild configuration
+      title: Additional options for the `xcodebuild` command
+      summary: Additional options to be added to the executed `xcodebuild` command.
       description: |-
-        Options added to the end of the xcodebuild call.
-        You can use multiple options, separated by a space
-        character. Example: `-xcconfig PATH -verbose`
+        Additional options to be added to the executed `xcodebuild` command.
+
+  # xcodebuild log formatting
+
+  - log_formatter: xcpretty
+    opts:
+      category: xcodebuild log formatting
+      title: Log formatter
+      summary: Defines how `xcodebuild` command's log is formatted.
+      description: |-
+        Defines how `xcodebuild` command's log is formatted.
+
+        Available options:
+        - `xcpretty`: The xcodebuild command’s output will be prettified by xcpretty.
+        - `xcodebuild`: Only the last 20 lines of raw xcodebuild output will be visible in the build log.
+
+        The raw xcodebuild log will be exported in both cases.
+      value_options:
+        - xcpretty
+        - xcodebuild
+      is_required: true
+
+  # Step output configuration
+
   - output_dir: $BITRISE_DEPLOY_DIR
     opts:
-      category: Debug
+      category: Step output configuration
       title: Output directory path
-      summary: ""
+      summary: This directory will contain the generated artifacts.
       description: |-
-        This directory will contain the generated .app artifacts.
+        This directory will contain the generated artifacts.
       is_required: true
-  - output_tool: xcpretty
+
+  # Caching
+
+  - cache_level: "swift_packages"
     opts:
-      category: Debug
-      title: Output tool
+      category: Caching
+      title: Enable collecting cache content
+      summary: Defines what cache content should be automatically collected.
       description: |-
-        If output_tool is set to xcpretty, the xcodebuild output will be prettified by xcpretty.
-        If output_tool is set to xcodebuild, the raw xcodebuild output will be printed.
+        Defines what cache content should be automatically collected.
+
+        Available options:
+        - `none`: Disable collecting cache content.
+        - `swift_packages`: Collect Swift PM packages added to the Xcode project.
       value_options:
-      - xcpretty
-      - xcodebuild
+        - "none"
+        - "swift_packages"
       is_required: true
-      is_expand: false
+
+  # Debugging
+
   - verbose_log: "no"
     opts:
-      category: Debug
-      title: Enable verbose logging?
-      description: Enable verbose logging?
-      is_required: true
+      category: Debugging
+      title: Enable verbose logging
+      summary: If this input is set, the Step will print additional logs for debugging.
+      description: |-
+        If this input is set, the Step will print additional logs for debugging.
       value_options:
       - "yes"
       - "no"
+      is_required: true
 
 outputs:
   - BITRISE_TEST_DIR_PATH:
