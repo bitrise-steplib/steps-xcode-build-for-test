@@ -171,8 +171,6 @@ func main() {
 	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
 
 	// save the build time frame to find the build generated artifacts
-	var buildInterval timeInterval
-
 	rawXcodebuildOut, buildInterval, xcodebuildErr := runCommandWithRetry(xcodeBuildCmd, cfg.LogFormatter == "xcpretty", swiftPackagesPath)
 
 	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
