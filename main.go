@@ -25,7 +25,7 @@ import (
 	"github.com/kballard/go-shellquote"
 )
 
-const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+const xcodebuildLogPath = "BITRISE_XCODEBUILD_LOG_PATH"
 
 // Config ...
 type Config struct {
@@ -173,13 +173,10 @@ func main() {
 	// save the build time frame to find the build generated artifacts
 	rawXcodebuildOut, buildInterval, xcodebuildErr := runCommandWithRetry(xcodeBuildCmd, cfg.LogFormatter == "xcpretty", swiftPackagesPath)
 
-	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
-		log.Warnf("Failed to export %s, error: %s", bitriseXcodeRawResultTextEnvKey, err)
-	} else {
-		log.Warnf(`You can find the last couple of lines of Xcode's build log above, but the full log is also available in the %s
-The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in the $%s environment variable
-(value: %s)`, filepath.Base(rawXcodebuildOutputLogPath), bitriseXcodeRawResultTextEnvKey, rawXcodebuildOutputLogPath)
+	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
+		log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
 	}
+	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODEBUILD_LOG_PATH env: %s", rawXcodebuildOutputLogPath)
 
 	if xcodebuildErr != nil {
 		if cfg.LogFormatter == "xcpretty" {

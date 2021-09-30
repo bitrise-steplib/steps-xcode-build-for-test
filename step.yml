@@ -201,9 +201,8 @@ outputs:
   - BITRISE_TEST_BUNDLE_ZIP_PATH:
     opts:
       title: "The built test directory and the built xctestrun file compressed as a single zip"
-  - BITRISE_XCODE_BUILD_RAW_RESULT_TEXT_PATH:
+  - BITRISE_XCODEBUILD_LOG_PATH:
     opts:
-      title: The full, raw build output file path
+      title: xcodebuild command log file path
       description: |-
-        This is the path of the raw build results log file.
-        If `output_tool=xcpretty` and the build fails this log will contain the build output.
+        The step exports the `xcodebuild build-for-testing` command output log.
