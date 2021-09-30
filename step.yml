@@ -77,7 +77,7 @@ inputs:
         The input value sets xcodebuild's `-scheme` option.
       is_required: true
 
-  - configuration:
+  - configuration: Debug
     opts:
       title: Build Configuration
       summary: Xcode Build Configuration.
@@ -87,6 +87,7 @@ inputs:
         If not specified, the default Build Configuration will be used.
 
         The input value sets xcodebuild's `-configuration` option.
+      is_required: true
 
   - destination: generic/platform=iOS
     opts:

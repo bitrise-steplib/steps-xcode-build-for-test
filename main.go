@@ -214,7 +214,6 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	cmd := factory.Create(args[0], args[1:], nil)
 	fmt.Println()
 	log.Donef("$ %s", cmd.PrintableCommandArgs())
-	fmt.Println()
 	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		failf("%s failed, error: %s", cmd.PrintableCommandArgs(), err)
@@ -230,11 +229,13 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to parse SYMROOT build setting: %s", err)
 	}
+	log.Printf("SYMROOT: %s", symRoot)
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
 		failf("Failed to parse CONFIGURATION build setting: %s", err)
 	}
+	log.Printf("CONFIGURATION: %s", configuration)
 
 	// Without better solution the step collects every xctestrun files and filters them for the build time frame
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", cfg.Scheme))
@@ -242,6 +243,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to search for xctestrun file using pattern: %s, error: %s", xctestrunPthPattern, err)
 	}
+	log.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
 
 	if len(xctestrunPths) == 0 {
 		failf("No xctestrun file found with pattern: %s", xctestrunPthPattern)
