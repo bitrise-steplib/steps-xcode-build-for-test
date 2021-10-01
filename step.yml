@@ -205,4 +205,3 @@ outputs:
     title: The full, raw build output file path
     description: |-
       This is the path of the raw build results log file.
-      If `output_tool=xcpretty` and the build fails this log will contain the build output.
