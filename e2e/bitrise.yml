@@ -1,0 +1,105 @@
+format_version: "11"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  test_swiftpm:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
+    - SAMPLE_APP_BRANCH: codesign-update
+    - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
+    - BITRISE_SCHEME: sample swiftpm
+    after_run:
+    - _run
+
+  test_build_output_renamed:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: renamed_scheme
+    after_run:
+    - _run
+
+  test_build_output_spaces:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: Scheme with spaces
+    after_run:
+    - _run
+
+  test_build_output_renamed_custom_build_options:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: renamed_scheme
+    - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
+    after_run:
+    - _run
+
+  test_build_output_spaces_custom_build_options:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: Scheme with spaces
+    - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
+    after_run:
+    - _run
+
+  _run:
+    steps:
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -ex
+            rm -rf "$BITRISE_SOURCE_DIR/_tmp"
+            mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
+    - git::https://github.com/bitrise-steplib/bitrise-step-simple-git-clone.git:
+        inputs:
+        - repository_url: $SAMPLE_APP_URL
+        - clone_into_dir: $BITRISE_SOURCE_DIR/_tmp
+        - branch: $SAMPLE_APP_BRANCH
+        - commit: $SAMPLE_APP_COMMIT
+    - certificate-and-profile-installer:
+    - path::./:
+        title: Step Test
+        inputs:
+        - project_path: ./_tmp/$BITRISE_PROJECT_PATH
+        - scheme: $BITRISE_SCHEME
+        - output_tool: xcodebuild
+        - xcodebuild_options: $XCODE_BUILD_OPTIONS
+    - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
+        is_always_run: true
+        inputs:
+        - envs:
+        - files:
+        - dirs: |-
+            BITRISE_TEST_DIR_PATH
+        - deploy_dir: $BITRISE_DEPLOY_DIR
+        - deployed_files: |-
+            BITRISE_TEST_BUNDLE_ZIP_PATH
+            BITRISE_XCTESTRUN_FILE_PATH
+        - deployed_dirs:
+    - script:
+        title: Output check
+        is_always_run: true
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -e
+            if [[ "$BITRISE_DEPLOY_DIR/testbundle.zip" != "$BITRISE_TEST_BUNDLE_ZIP_PATH" ]] ; then
+              echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
+              exit 1
+            fi
+            if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then
+              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
+              exit 1
+            fi
+            if [[ "$BITRISE_XCTESTRUN_FILE_PATH" =~ "$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos[0-9]{2}.[0-9]{1,2}-arm64e.xctestrun" ]] ; then
+              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos{{sdk-version}}-arm64e.xctestrun\""
+              exit 1
+            fi
