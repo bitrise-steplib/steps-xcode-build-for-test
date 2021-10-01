@@ -23,7 +23,7 @@ github.com/bitrise-io/go-utils/pretty
 github.com/bitrise-io/go-utils/sliceutil
 github.com/bitrise-io/go-utils/stringutil
 github.com/bitrise-io/go-utils/ziputil
-# github.com/bitrise-io/go-xcode v0.0.0-20210927150020-dd11ae1c9008
+# github.com/bitrise-io/go-xcode v0.0.0-20210928140350-ec12eb8661c0
 ## explicit; go 1.15
 github.com/bitrise-io/go-xcode/models
 github.com/bitrise-io/go-xcode/utility

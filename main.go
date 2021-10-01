@@ -12,6 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/env"
 	"github.com/bitrise-io/go-utils/errorutil"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
@@ -24,21 +25,25 @@ import (
 	"github.com/kballard/go-shellquote"
 )
 
-const bitriseXcodeRawResultTextEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+const xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 
 // Config ...
 type Config struct {
-	ProjectPath               string `env:"project_path,required"`
-	Scheme                    string `env:"scheme,required"`
-	Configuration             string `env:"configuration"`
-	Destination               string `env:"destination,required"`
-	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
-	CacheLevel                string `env:"cache_level,opt[none,swift_packages]"`
+	ProjectPath   string `env:"project_path,required"`
+	Scheme        string `env:"scheme,required"`
+	Configuration string `env:"configuration"`
+	Destination   string `env:"destination,required"`
 
+	XCConfigContent   string `env:"xcconfig_content"`
 	XcodebuildOptions string `env:"xcodebuild_options"`
-	OutputDir         string `env:"output_dir,required"`
-	OutputTool        string `env:"output_tool,opt[xcpretty,xcodebuild]"`
-	VerboseLog        bool   `env:"verbose_log,required"`
+
+	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
+
+	OutputDir string `env:"output_dir,required"`
+
+	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
+
+	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
 }
 
 func main() {
@@ -79,13 +84,13 @@ func main() {
 	//
 	// Ensure xcpretty
 	// only if output tool is set to xcpretty
-	if cfg.OutputTool == "xcpretty" {
+	if cfg.LogFormatter == "xcpretty" {
 		log.Infof("Output tool check:")
 
 		// check if already installed
 		if installed, err := xcpretty.IsInstalled(); err != nil {
 			log.Warnf(" Failed to check if xcpretty is installed, error: %s", err)
-			cfg.OutputTool = "xcodebuild"
+			cfg.LogFormatter = "xcodebuild"
 		} else if !installed {
 			log.Warnf(` xcpretty is not installed`)
 			log.Printf(" Installing...")
@@ -93,13 +98,13 @@ func main() {
 			// install if not installed
 			if cmds, err := xcpretty.Install(); err != nil {
 				log.Warnf(" Failed to install xcpretty, error: %s", err)
-				cfg.OutputTool = "xcodebuild"
+				cfg.LogFormatter = "xcodebuild"
 			} else {
 				for _, cmd := range cmds {
 					log.Donef(" $ %s", cmd.PrintableCommandArgs())
 					if err := cmd.Run(); err != nil {
 						log.Warnf(" Failed to install xcpretty, error: %s", err)
-						cfg.OutputTool = "xcodebuild"
+						cfg.LogFormatter = "xcodebuild"
 						break
 					}
 				}
@@ -109,7 +114,7 @@ func main() {
 			log.Donef(` xcpretty is installed`)
 		}
 		// warn user if we needed to switch back from xcpretty
-		if cfg.OutputTool != "xcpretty" {
+		if cfg.LogFormatter != "xcpretty" {
 			log.Warnf(" Switching output tool to xcodebuild")
 		}
 		fmt.Println()
@@ -144,31 +149,41 @@ func main() {
 		}
 	}
 
+	var xcconfigPath string
+	if cfg.XCConfigContent != "" {
+		dir, err := pathutil.NewPathProvider().CreateTempDir("")
+		if err != nil {
+			failf("Unable to create temp dir for writing XCConfig: %s", err)
+		}
+		xcconfigPath = filepath.Join(dir, "temp.xcconfig")
+
+		if err = fileutil.NewFileManager().Write(xcconfigPath, cfg.XCConfigContent, 0644); err != nil {
+			failf("unable to write XCConfig content into file: %s", err, err)
+		}
+	}
+
 	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "", factory)
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
-	xcodeBuildCmd.SetDisableIndexWhileBuilding(cfg.DisableIndexWhileBuilding)
+	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
 
 	// save the build time frame to find the build generated artifacts
-	var buildInterval timeInterval
+	rawXcodebuildOut, buildInterval, xcodebuildErr := runCommandWithRetry(xcodeBuildCmd, cfg.LogFormatter == "xcpretty", swiftPackagesPath)
 
-	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.OutputTool == "xcpretty", swiftPackagesPath)
-	if err != nil {
-		if cfg.OutputTool == "xcpretty" {
+	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
+		log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
+	}
+	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODEBUILD_LOG_PATH env: %s", rawXcodebuildOutputLogPath)
+
+	if xcodebuildErr != nil {
+		if cfg.LogFormatter == "xcpretty" {
 			log.Errorf("\nLast lines of the Xcode's build log:")
 			fmt.Println(stringutil.LastNLines(rawXcodebuildOut, 10))
-			if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, bitriseXcodeRawResultTextEnvKey); err != nil {
-				log.Warnf("Failed to export %s, error: %s", bitriseXcodeRawResultTextEnvKey, err)
-			} else {
-				log.Warnf(`You can find the last couple of lines of Xcode's build log above, but the full log is also available in the %s
-The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in the $%s environment variable
-(value: %s)`, filepath.Base(rawXcodebuildOutputLogPath), bitriseXcodeRawResultTextEnvKey, rawXcodebuildOutputLogPath)
-			}
 		}
-		failf("Build failed, error: %s", err)
+		failf("Build failed, error: %s", xcodebuildErr)
 	}
 	fmt.Println()
 
@@ -196,7 +211,6 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	cmd := factory.Create(args[0], args[1:], nil)
 	fmt.Println()
 	log.Donef("$ %s", cmd.PrintableCommandArgs())
-	fmt.Println()
 	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		failf("%s failed, error: %s", cmd.PrintableCommandArgs(), err)
@@ -212,11 +226,13 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to parse SYMROOT build setting: %s", err)
 	}
+	log.Printf("SYMROOT: %s", symRoot)
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
 		failf("Failed to parse CONFIGURATION build setting: %s", err)
 	}
+	log.Printf("CONFIGURATION: %s", configuration)
 
 	// Without better solution the step collects every xctestrun files and filters them for the build time frame
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", cfg.Scheme))
@@ -224,6 +240,7 @@ The log file is stored in $BITRISE_DEPLOY_DIR, and its full path is available in
 	if err != nil {
 		failf("Failed to search for xctestrun file using pattern: %s, error: %s", xctestrunPthPattern, err)
 	}
+	log.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
 
 	if len(xctestrunPths) == 0 {
 		failf("No xctestrun file found with pattern: %s", xctestrunPthPattern)
