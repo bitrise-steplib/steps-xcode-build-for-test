@@ -1,52 +1,51 @@
 title: "Xcode Build for testing for iOS"
 summary: Performs xcodebuild's build-for-testing action
-description: |- 
+description: |-
   The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file. 
-  
+
   ### Configuring the Step 
-  
+
   At a minimum, the Step needs valid values for three inputs:
-  
+
   - **Project (or Workspace) path**: This is the path to the `.xcodeproj` or `.xcworkspace` file. In most cases, leave it on the default value.
   - **Scheme name**: The name of your Xcode scheme. By default, the Step will use the scheme that was set when you added the app on Bitrise.
   - **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section. 
   We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools. 
-  
+
   Optionally, you can define the configuration to use in the **Configuration name** input. Normally, the scheme defines the configuration type, such as **debug** or **release**.
-  
+
   The Step can also cache your Swift PM dependencies. To enable caching, make sure the **Enable caching of Swift Package Manager packages** input is set to `swift_packages`.
-  
+
   ### Troubleshooting
-  
+
   In the **Debug** option group, you can:
-  
-  - Add additional flags to the `xcodebuild` command. 
+
+  - Add additional flags to the xcodebuild command.
   - Enable verbose logging.
   - Change the output directory path and the output tool.
-  
+
   ### Useful links
-  
+
   - [Running Xcode tests](https://devcenter.bitrise.io/testing/running-xcode-tests/)
   - [Building from the Command Line with Xcode](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
-  
+
   ### Related Steps 
-  
+
   - [Xcode Test for iOS](https://www.bitrise.io/integrations/steps/xcode-test)
   - [Xcode Analyze](https://www.bitrise.io/integrations/steps/xcode-analyze)
- 
 
 website: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 support_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test/issues
 
 project_type_tags:
-  - ios
-  - react-native
-  - cordova
-  - ionic
+- ios
+- react-native
+- cordova
+- ionic
 
 type_tags:
-  - build
+- build
 
 deps:
   check_only:
@@ -57,152 +56,152 @@ toolkit:
     package_name: github.com/bitrise-steplib/steps-xcode-build-for-test
 
 inputs:
-  - project_path: $BITRISE_PROJECT_PATH
-    opts:
-      title: Project path
-      summary: Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
-      description: |-
-        Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
+- project_path: $BITRISE_PROJECT_PATH
+  opts:
+    title: Project path
+    summary: Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
+    description: |-
+      Xcode Project (`.xcodeproj`) or Workspace (`.xcworkspace`) path.
 
-        The input value sets xcodebuild's `-project` or `-workspace` option.
-      is_required: true
+      The input value sets xcodebuild's `-project` or `-workspace` option.
+    is_required: true
 
-  - scheme: $BITRISE_SCHEME
-    opts:
-      title: Scheme
-      summary: Xcode Scheme name.
-      description: |-
-        Xcode Scheme name.
+- scheme: $BITRISE_SCHEME
+  opts:
+    title: Scheme
+    summary: Xcode Scheme name.
+    description: |-
+      Xcode Scheme name.
 
-        The input value sets xcodebuild's `-scheme` option.
-      is_required: true
+      The input value sets xcodebuild's `-scheme` option.
+    is_required: true
 
-  - configuration: Debug
-    opts:
-      title: Build Configuration
-      summary: Xcode Build Configuration.
-      description: |-
-        Xcode Build Configuration.
+- configuration: Debug
+  opts:
+    title: Build Configuration
+    summary: Xcode Build Configuration.
+    description: |-
+      Xcode Build Configuration.
 
-        If not specified, the default Build Configuration will be used.
+      If not specified, the default Build Configuration will be used.
 
-        The input value sets xcodebuild's `-configuration` option.
-      is_required: true
+      The input value sets xcodebuild's `-configuration` option.
+    is_required: true
 
-  - destination: generic/platform=iOS
-    opts:
-      title: Device destination specifier
-      summary: Destination specifier describes the device to use as a destination.
-      description: |-
-        Destination specifier describes the device to use as a destination.
+- destination: generic/platform=iOS
+  opts:
+    title: Device destination specifier
+    summary: Destination specifier describes the device to use as a destination.
+    description: |-
+      Destination specifier describes the device to use as a destination.
 
-        The input value sets xcodebuild's `-destination` option.
-      is_required: true
+      The input value sets xcodebuild's `-destination` option.
+    is_required: true
 
-  # xcodebuild configuration
+# xcodebuild configuration
 
-  - xcconfig_content: "COMPILER_INDEX_STORE_ENABLE = NO"
-    opts:
-      category: xcodebuild configuration
-      title: Build settings (xcconfig)
-      summary: Build settings to override the project's build settings.
-      description: |-
-        Build settings to override the project's build settings.
+- xcconfig_content: "COMPILER_INDEX_STORE_ENABLE = NO"
+  opts:
+    category: xcodebuild configuration
+    title: Build settings (xcconfig)
+    summary: Build settings to override the project's build settings.
+    description: |-
+      Build settings to override the project's build settings.
 
-        Build settings must be separated by newline character (`\n`).
+      Build settings must be separated by newline character (`\n`).
 
-        Example:
+      Example:
 
-        ```
-        COMPILER_INDEX_STORE_ENABLE = NO
-        ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
-        ```
+      ```
+      COMPILER_INDEX_STORE_ENABLE = NO
+      ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
+      ```
 
-        The input value sets xcodebuild's `-xcconfig` option.
+      The input value sets xcodebuild's `-xcconfig` option.
 
-  - xcodebuild_options: ""
-    opts:
-      category: xcodebuild configuration
-      title: Additional options for the `xcodebuild` command
-      summary: Additional options to be added to the executed `xcodebuild` command.
-      description: |-
-        Additional options to be added to the executed `xcodebuild` command.
+- xcodebuild_options: ""
+  opts:
+    category: xcodebuild configuration
+    title: Additional options for the xcodebuild command
+    summary: Additional options to be added to the executed xcodebuild command.
+    description: |-
+      Additional options to be added to the executed xcodebuild command.
 
-  # xcodebuild log formatting
+# xcodebuild log formatting
 
-  - log_formatter: xcpretty
-    opts:
-      category: xcodebuild log formatting
-      title: Log formatter
-      summary: Defines how `xcodebuild` command's log is formatted.
-      description: |-
-        Defines how `xcodebuild` command's log is formatted.
+- log_formatter: xcpretty
+  opts:
+    category: xcodebuild log formatting
+    title: Log formatter
+    summary: Defines how xcodebuild command's log is formatted.
+    description: |-
+      Defines how xcodebuild command's log is formatted.
 
-        Available options:
-        - `xcpretty`: The xcodebuild command’s output will be prettified by xcpretty.
-        - `xcodebuild`: Only the last 20 lines of raw xcodebuild output will be visible in the build log.
+      Available options:
+      - `xcpretty`: The xcodebuild command’s output will be prettified by xcpretty.
+      - `xcodebuild`: Only the last 20 lines of raw xcodebuild output will be visible in the build log.
 
-        The raw xcodebuild log will be exported in both cases.
-      value_options:
-        - xcpretty
-        - xcodebuild
-      is_required: true
+      The raw xcodebuild log will be exported in both cases.
+    value_options:
+    - xcpretty
+    - xcodebuild
+    is_required: true
 
-  # Step output configuration
+# Step output configuration
 
-  - output_dir: $BITRISE_DEPLOY_DIR
-    opts:
-      category: Step output configuration
-      title: Output directory path
-      summary: This directory will contain the generated artifacts.
-      description: |-
-        This directory will contain the generated artifacts.
-      is_required: true
+- output_dir: $BITRISE_DEPLOY_DIR
+  opts:
+    category: Step output configuration
+    title: Output directory path
+    summary: This directory will contain the generated artifacts.
+    description: |-
+      This directory will contain the generated artifacts.
+    is_required: true
 
-  # Caching
+# Caching
 
-  - cache_level: "swift_packages"
-    opts:
-      category: Caching
-      title: Enable collecting cache content
-      summary: Defines what cache content should be automatically collected.
-      description: |-
-        Defines what cache content should be automatically collected.
+- cache_level: "swift_packages"
+  opts:
+    category: Caching
+    title: Enable collecting cache content
+    summary: Defines what cache content should be automatically collected.
+    description: |-
+      Defines what cache content should be automatically collected.
 
-        Available options:
-        - `none`: Disable collecting cache content.
-        - `swift_packages`: Collect Swift PM packages added to the Xcode project.
-      value_options:
-        - "none"
-        - "swift_packages"
-      is_required: true
+      Available options:
+      - `none`: Disable collecting cache content.
+      - `swift_packages`: Collect Swift PM packages added to the Xcode project.
+    value_options:
+    - "none"
+    - "swift_packages"
+    is_required: true
 
-  # Debugging
+# Debugging
 
-  - verbose_log: "no"
-    opts:
-      category: Debugging
-      title: Enable verbose logging
-      summary: If this input is set, the Step will print additional logs for debugging.
-      description: |-
-        If this input is set, the Step will print additional logs for debugging.
-      value_options:
-      - "yes"
-      - "no"
-      is_required: true
+- verbose_log: "no"
+  opts:
+    category: Debugging
+    title: Enable verbose logging
+    summary: If this input is set, the Step will print additional logs for debugging.
+    description: |-
+      If this input is set, the Step will print additional logs for debugging.
+    value_options:
+    - "yes"
+    - "no"
+    is_required: true
 
 outputs:
-  - BITRISE_TEST_DIR_PATH:
-    opts:
-      title: "Path to the built test directory (example: PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos)"
-  - BITRISE_XCTESTRUN_FILE_PATH:
-    opts:
-      title: "Path to the built xctestrun file (example: PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun)"
-  - BITRISE_TEST_BUNDLE_ZIP_PATH:
-    opts:
-      title: "The built test directory and the built xctestrun file compressed as a single zip"
-  - BITRISE_XCODEBUILD_LOG_PATH:
-    opts:
-      title: xcodebuild command log file path
-      description: |-
-        The step exports the `xcodebuild build-for-testing` command output log.
+- BITRISE_TEST_DIR_PATH:
+  opts:
+    title: "Path to the built test directory (example: PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos)"
+- BITRISE_XCTESTRUN_FILE_PATH:
+  opts:
+    title: "Path to the built xctestrun file (example: PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun)"
+- BITRISE_TEST_BUNDLE_ZIP_PATH:
+  opts:
+    title: "The built test directory and the built xctestrun file compressed as a single zip"
+- BITRISE_XCODEBUILD_LOG_PATH:
+  opts:
+    title: xcodebuild command log file path
+    description: |-
+      The step exports the `xcodebuild build-for-testing` command output log.
