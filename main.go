@@ -25,7 +25,7 @@ import (
 	"github.com/kballard/go-shellquote"
 )
 
-const xcodebuildLogPath = "BITRISE_XCODEBUILD_LOG_PATH"
+const xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
 
 // Config ...
 type Config struct {
