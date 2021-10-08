@@ -17,6 +17,7 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-xcode/utility"
+	"github.com/bitrise-io/go-xcode/xcconfig"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
@@ -149,17 +150,10 @@ func main() {
 		}
 	}
 
-	var xcconfigPath string
-	if cfg.XCConfigContent != "" {
-		dir, err := pathutil.NewPathProvider().CreateTempDir("")
-		if err != nil {
-			failf("Unable to create temp dir for writing XCConfig: %s", err)
-		}
-		xcconfigPath = filepath.Join(dir, "temp.xcconfig")
-
-		if err = fileutil.NewFileManager().Write(xcconfigPath, cfg.XCConfigContent, 0644); err != nil {
-			failf("unable to write XCConfig content into file: %s", err, err)
-		}
+	xcconfigWriter := xcconfig.NewWriter(pathutil.NewPathProvider(), fileutil.NewFileManager())
+	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
+	if err != nil {
+		failf(err.Error())
 	}
 
 	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "", factory)
