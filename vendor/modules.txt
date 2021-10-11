@@ -23,7 +23,7 @@ github.com/bitrise-io/go-utils/pretty
 github.com/bitrise-io/go-utils/sliceutil
 github.com/bitrise-io/go-utils/stringutil
 github.com/bitrise-io/go-utils/ziputil
-# github.com/bitrise-io/go-xcode v0.0.0-20211007125122-93e3a53643a2
+# github.com/bitrise-io/go-xcode v0.0.0-20211011120255-9ee1aa84727a
 ## explicit; go 1.16
 github.com/bitrise-io/go-xcode/models
 github.com/bitrise-io/go-xcode/utility
@@ -31,7 +31,6 @@ github.com/bitrise-io/go-xcode/xcconfig
 github.com/bitrise-io/go-xcode/xcodebuild
 github.com/bitrise-io/go-xcode/xcodecache
 github.com/bitrise-io/go-xcode/xcodeproject/serialized
-github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild
 github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj
 github.com/bitrise-io/go-xcode/xcodeproject/xcscheme
 github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace
