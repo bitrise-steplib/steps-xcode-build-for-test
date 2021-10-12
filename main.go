@@ -20,7 +20,6 @@ import (
 	"github.com/bitrise-io/go-xcode/xcconfig"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
-	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	"github.com/bitrise-io/go-xcode/xcpretty"
 	"github.com/kballard/go-shellquote"
@@ -185,34 +184,17 @@ func main() {
 	// Export
 	log.Infof("Export:")
 
-	args := []string{"xcodebuild", "-showBuildSettings"}
-	{
-		if xcworkspace.IsWorkspace(absProjectPath) {
-			args = append(args, "-workspace", absProjectPath)
-		} else {
-			args = append(args, "-project", absProjectPath)
-		}
+	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(absProjectPath, factory)
+	buildSettingsCmd.SetScheme(cfg.Scheme)
+	buildSettingsCmd.SetConfiguration(cfg.Configuration)
+	buildSettingsCmd.SetCustomOptions(append([]string{"build-for-testing"}, customOptions...))
 
-		args = append(args, "-scheme", cfg.Scheme)
-		if cfg.Configuration != "" {
-			args = append(args, "-configuration", cfg.Configuration)
-		}
-
-		args = append(args, "build-for-testing")
-		args = append(args, customOptions...)
-	}
-
-	cmd := factory.Create(args[0], args[1:], nil)
 	fmt.Println()
-	log.Donef("$ %s", cmd.PrintableCommandArgs())
-	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
-	if err != nil {
-		failf("%s failed, error: %s", cmd.PrintableCommandArgs(), err)
-	}
+	log.Donef("$ %s", buildSettingsCmd.PrintableCmd())
 
-	buildSettings, err := parseShowBuildSettingsOutput(out)
+	buildSettings, err := buildSettingsCmd.RunAndReturnSettings()
 	if err != nil {
-		failf("Failed to parse build settings, error: %s", err)
+		failf("failed to read build settings: %s", err)
 	}
 
 	// The path at which all products will be placed when performing a build. Typically this path is not set per target, but is set per-project or per-user.
@@ -320,28 +302,4 @@ func main() {
 func failf(format string, v ...interface{}) {
 	log.Errorf(format, v...)
 	os.Exit(1)
-}
-
-func parseShowBuildSettingsOutput(out string) (serialized.Object, error) {
-	settings := serialized.Object{}
-
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		split := strings.Split(line, " = ")
-
-		if len(split) < 2 {
-			continue
-		}
-
-		key := strings.TrimSpace(split[0])
-		value := strings.TrimSpace(strings.Join(split[1:], " = "))
-
-		settings[key] = value
-	}
-
-	return settings, nil
 }
