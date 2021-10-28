@@ -1,16 +1,16 @@
-title: "Xcode Build for testing for iOS"
+title: Xcode Build for testing for iOS
 summary: Performs xcodebuild's build-for-testing action
 description: |-
-  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file. 
+  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file.
 
-  ### Configuring the Step 
+  ### Configuring the Step
 
   At a minimum, the Step needs valid values for three inputs:
 
   - **Project (or Workspace) path**: This is the path to the `.xcodeproj` or `.xcworkspace` file. In most cases, leave it on the default value.
   - **Scheme name**: The name of your Xcode scheme. By default, the Step will use the scheme that was set when you added the app on Bitrise.
-  - **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section. 
-  We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools. 
+  - **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section.
+  We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools.
 
   Optionally, you can define the configuration to use in the **Configuration name** input. Normally, the scheme defines the configuration type, such as **debug** or **release**.
 
@@ -29,7 +29,7 @@ description: |-
   - [Running Xcode tests](https://devcenter.bitrise.io/testing/running-xcode-tests/)
   - [Building from the Command Line with Xcode](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
 
-  ### Related Steps 
+  ### Related Steps
 
   - [Xcode Test for iOS](https://www.bitrise.io/integrations/steps/xcode-test)
   - [Xcode Analyze](https://www.bitrise.io/integrations/steps/xcode-analyze)
@@ -100,7 +100,7 @@ inputs:
 
 # xcodebuild configuration
 
-- xcconfig_content: "COMPILER_INDEX_STORE_ENABLE = NO"
+- xcconfig_content: COMPILER_INDEX_STORE_ENABLE = NO
   opts:
     category: xcodebuild configuration
     title: Build settings (xcconfig)
@@ -160,7 +160,7 @@ inputs:
 
 # Caching
 
-- cache_level: "swift_packages"
+- cache_level: swift_packages
   opts:
     category: Caching
     title: Enable collecting cache content
@@ -172,8 +172,8 @@ inputs:
       - `none`: Disable collecting cache content.
       - `swift_packages`: Collect Swift PM packages added to the Xcode project.
     value_options:
-    - "none"
-    - "swift_packages"
+    - none
+    - swift_packages
     is_required: true
 
 # Debugging
@@ -199,7 +199,7 @@ outputs:
     title: "Path to the built xctestrun file (example: PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun)"
 - BITRISE_TEST_BUNDLE_ZIP_PATH:
   opts:
-    title: "The built test directory and the built xctestrun file compressed as a single zip"
+    title: The built test directory and the built xctestrun file compressed as a single zip
 - BITRISE_XCODE_RAW_RESULT_TEXT_PATH:
   opts:
     title: The full, raw build output file path

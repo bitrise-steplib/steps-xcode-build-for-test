@@ -17,7 +17,8 @@ workflows:
             fi
             envman add --key XCODE_MAJOR_VERSION_AT_MOST_11 --value "true"
     - bitrise-run:
-        run_if: '{{enveq "XCODE_MAJOR_VERSION_AT_MOST_11" "true"}}'
+        run_if: |-
+          {{ enveq "XCODE_MAJOR_VERSION_AT_MOST_11" "true" }}
         inputs:
         - workflow_id: utility_test_swiftpm
         - bitrise_config_path: ./e2e/bitrise.yml
@@ -84,7 +85,7 @@ workflows:
         - clone_into_dir: $BITRISE_SOURCE_DIR/_tmp
         - branch: $SAMPLE_APP_BRANCH
         - commit: $SAMPLE_APP_COMMIT
-    - certificate-and-profile-installer:
+    - certificate-and-profile-installer: { }
     - path::./:
         title: Step Test
         inputs:
