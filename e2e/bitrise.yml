@@ -1,6 +1,20 @@
 format_version: "11"
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
+app:
+  envs:
+  # Shared test configs
+  - BITRISE_KEYCHAIN_PATH: $HOME/Library/Keychains/login.keychain
+  # Shared test secrets
+  - BITRISE_KEYCHAIN_PASSWORD: $BITRISE_KEYCHAIN_PASSWORD
+  - BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+  - BITFALL_APPLE_IOS_CERTIFICATE_URL_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_URL_LIST
+  - BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+  - BITFALL_APPLE_IOS_CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_PASSPHRASE_LIST
+
+  - BITFALL_APPSTORECONNECT_API_KEY_URL: $BITFALL_APPSTORECONNECT_API_KEY_URL
+  - BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
+
 workflows:
   test_swiftpm:
     before_run:
@@ -29,8 +43,20 @@ workflows:
     - SAMPLE_APP_BRANCH: codesign-update
     - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
     - BITRISE_SCHEME: sample swiftpm
+    - CODE_SIGNING_METHOD: apple-id
     after_run:
     - _run
+
+  utility_test_uitest_signing:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
+    - BITRISE_SCHEME: sample-apps-fastlane-test
+    - BITRISE_CONFIGURATION: Debug
+    - CODE_SIGNING_METHOD: api-key
+    after_run:
+      - _run
 
   test_build_output_renamed:
     envs:
@@ -38,6 +64,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - CODE_SIGNING_METHOD: "off"
     after_run:
     - _run
 
@@ -47,6 +74,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
+    - CODE_SIGNING_METHOD: "off"
     after_run:
     - _run
 
@@ -57,6 +85,7 @@ workflows:
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
+    - CODE_SIGNING_METHOD: "off"
     after_run:
     - _run
 
@@ -67,6 +96,7 @@ workflows:
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
+    - CODE_SIGNING_METHOD: "off"
     after_run:
     - _run
 
@@ -93,6 +123,9 @@ workflows:
         - scheme: $BITRISE_SCHEME
         - output_tool: xcodebuild
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
+        - automatic_code_signing: $CODE_SIGNING_METHOD
+        - certificate_url_list: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+        - certificate_passphrase_list: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
         is_always_run: true
         inputs:
