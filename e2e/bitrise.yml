@@ -52,6 +52,7 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     after_run:
     - _run
+    - _run_device_tests
 
   test_build_output_renamed:
     envs:
@@ -151,6 +152,10 @@ workflows:
               echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos{{sdk-version}}-arm64e.xctestrun\""
               exit 1
             fi
+
+  _run_device_tests:
+    steps:
+    - virtual-device-testing-for-ios: { }
 
   _expose_xcode_version:
     steps:
