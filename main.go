@@ -55,7 +55,7 @@ type Config struct {
 
 	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
 	CertificateURLList        string          `env:"certificate_url_list"`
-	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
+	CertificatePassphraseList stepconf.Secret `env:"certificate_passphrase_list"`
 	KeychainPath              string          `env:"keychain_path"`
 	KeychainPassword          stepconf.Secret `env:"keychain_password"`
 	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
