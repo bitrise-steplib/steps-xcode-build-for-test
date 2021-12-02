@@ -110,8 +110,6 @@ workflows:
         - clone_into_dir: $BITRISE_SOURCE_DIR/_tmp
         - branch: $SAMPLE_APP_BRANCH
         - commit: $SAMPLE_APP_COMMIT
-    # TODO: remove
-    - certificate-and-profile-installer: { }
     - path::./:
         title: Step Test
         inputs:
