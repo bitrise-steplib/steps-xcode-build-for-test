@@ -56,11 +56,10 @@ workflows:
 
   test_uitest_certinstaller_signing:
     envs:
-    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
-    - SAMPLE_APP_BRANCH: master
-    - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
-    - BITRISE_SCHEME: sample-apps-fastlane-test
-    - BITRISE_CONFIGURATION: Debug
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: renamed_scheme
     - CODE_SIGNING_METHOD: "off"
     steps:
     - certificate-and-profile-installer: { }
