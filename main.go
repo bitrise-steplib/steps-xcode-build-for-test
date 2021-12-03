@@ -173,7 +173,7 @@ func main() {
 
 		xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
 		if err != nil {
-			failf("Failed to manage code signing: %s", err)
+			failf("Failed to prepare code signing assets: %s", err)
 		}
 
 		if xcodebuildAuthParams != nil {
