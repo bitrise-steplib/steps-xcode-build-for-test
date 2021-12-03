@@ -42,7 +42,7 @@ workflows:
     after_run:
     - _run
 
-  test_uitest_signing:
+  test_uitest_api_key_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
@@ -53,6 +53,30 @@ workflows:
     after_run:
     - _run
     - _run_device_tests
+
+  test_uitest_certinstaller_signing:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
+    - BITRISE_SCHEME: sample-apps-fastlane-test
+    - BITRISE_CONFIGURATION: Debug
+    - CODE_SIGNING_METHOD: off
+    steps:
+    - certificate-and-profile-installer: { }
+    after_run:
+    - _run
+
+  test_uitest_apple_id_signing:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
+    - BITRISE_SCHEME: sample-apps-fastlane-test
+    - BITRISE_CONFIGURATION: Debug
+    - CODE_SIGNING_METHOD: apple-id
+    after_run:
+    - _run
 
   test_build_output_renamed:
     envs:
