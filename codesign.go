@@ -6,6 +6,7 @@ import (
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/retry"
+	"github.com/bitrise-io/go-xcode/autocodesign"
 	"github.com/bitrise-io/go-xcode/autocodesign/certdownloader"
 	"github.com/bitrise-io/go-xcode/autocodesign/codesignasset"
 	"github.com/bitrise-io/go-xcode/autocodesign/devportalclient"
@@ -28,7 +29,7 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 
 	codesignInputs := codesign.Input{
 		AuthType:                  authType,
-		DistributionMethod:        "development",
+		DistributionMethod:        string(autocodesign.Development),
 		CertificateURLList:        config.CertificateURLList,
 		CertificatePassphraseList: config.CertificatePassphraseList,
 		KeychainPath:              config.KeychainPath,

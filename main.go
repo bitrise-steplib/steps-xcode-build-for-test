@@ -234,7 +234,7 @@ func main() {
 	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
 		log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
 	}
-	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODEBUILD_LOG_PATH env: %s", rawXcodebuildOutputLogPath)
+	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODE_RAW_RESULT_TEXT_PATH env: %s", rawXcodebuildOutputLogPath)
 
 	if xcodebuildErr != nil {
 		if cfg.LogFormatter == "xcpretty" {
