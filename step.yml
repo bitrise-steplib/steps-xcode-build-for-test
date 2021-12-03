@@ -206,7 +206,7 @@ inputs:
     is_required: true
     is_sensitive: true
 
-- certificate_passphrase_list: $BITRISE_CERTIFICATE_PASSPHRASE
+- passphrase_list: $BITRISE_CERTIFICATE_PASSPHRASE
   opts:
     category: Automatic code signing
     title: Code signing certificate passphrase
