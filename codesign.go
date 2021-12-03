@@ -66,7 +66,16 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 		IsVerboseLog:               config.VerboseLog,
 	}
 
-	return codesign.NewManager(
+	project, err := projectmanager.NewProject(projectmanager.InitParams{
+		ProjectOrWorkspacePath: config.ProjectPath,
+		SchemeName:             config.Scheme,
+		ConfigurationName:      config.Configuration,
+	})
+	if err != nil {
+		return codesign.Manager{}, fmt.Errorf("failed to open project: %s", err)
+	}
+
+	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
 		serviceConnection,
@@ -74,11 +83,7 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, retry.NewHTTPClient().StandardClient()),
 		codesignasset.NewWriter(codesignConfig.Keychain),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
-		projectmanager.NewFactory(projectmanager.InitParams{
-			ProjectOrWorkspacePath: config.ProjectPath,
-			SchemeName:             config.Scheme,
-			ConfigurationName:      config.Configuration,
-		}),
+		project,
 		logger,
 	), nil
 }
