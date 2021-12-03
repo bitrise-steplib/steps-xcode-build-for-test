@@ -16,7 +16,7 @@ func Print(config interface{}) {
 
 func valueString(v reflect.Value) string {
 	if v.Kind() != reflect.Ptr {
-		if v.IsZero() {
+		if v.Kind() == reflect.String && v.Len() == 0 {
 			return fmt.Sprintf("<unset>")
 		}
 		return fmt.Sprintf("%v", v.Interface())
