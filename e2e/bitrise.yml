@@ -61,7 +61,7 @@ workflows:
     - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
     - BITRISE_SCHEME: sample-apps-fastlane-test
     - BITRISE_CONFIGURATION: Debug
-    - CODE_SIGNING_METHOD: off
+    - CODE_SIGNING_METHOD: "off"
     steps:
     - certificate-and-profile-installer: { }
     after_run:
