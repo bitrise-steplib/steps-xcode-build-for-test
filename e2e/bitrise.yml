@@ -143,7 +143,7 @@ workflows:
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
         - automatic_code_signing: $CODE_SIGNING_METHOD
         - certificate_url_list: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
-        - certificate_passphrase_list: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+        - passphrase_list: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
         is_always_run: true
         inputs:
