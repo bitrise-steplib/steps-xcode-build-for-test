@@ -16,6 +16,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xcode/codesign"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/xcconfig"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
@@ -25,7 +26,14 @@ import (
 	"github.com/kballard/go-shellquote"
 )
 
-const xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+const (
+	xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+
+	// Code Signing Authentication Source
+	codeSignSourceOff     = "off"
+	codeSignSourceAPIKey  = "api-key"
+	codeSignSourceAppleID = "apple-id"
+)
 
 // Config ...
 type Config struct {
@@ -44,6 +52,16 @@ type Config struct {
 	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
 
 	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
+
+	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
+	CertificateURLList        string          `env:"certificate_url_list"`
+	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
+	KeychainPath              string          `env:"keychain_path"`
+	KeychainPassword          stepconf.Secret `env:"keychain_password"`
+	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
+	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
+	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
+	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
 }
 
 func main() {
@@ -54,6 +72,8 @@ func main() {
 	if err := parser.Parse(&cfg); err != nil {
 		failf("Issue with input: %s", err)
 	}
+	logger := log.NewLogger()
+	logger.EnableDebugLog(cfg.VerboseLog)
 	log.SetEnableDebugLog(cfg.VerboseLog)
 
 	stepconf.Print(cfg)
@@ -87,6 +107,7 @@ func main() {
 	if cfg.LogFormatter == "xcpretty" {
 		log.Infof("Output tool check:")
 
+		var xcpretty = xcpretty.NewXcpretty()
 		// check if already installed
 		if installed, err := xcpretty.IsInstalled(); err != nil {
 			log.Warnf(" Failed to check if xcpretty is installed, error: %s", err)
@@ -136,6 +157,47 @@ func main() {
 		}
 	}
 
+	var codesignManager *codesign.Manager = nil
+	if cfg.CodeSigningAuthSource != codeSignSourceOff {
+		codesignMgr, err := createCodesignManager(cfg, xcodebuildVersion.MajorVersion, logger, factory)
+		if err != nil {
+			failf("%s", err)
+		}
+		codesignManager = &codesignMgr
+	}
+
+	// manage code signing
+	var authOptions *xcodebuild.AuthenticationParams = nil
+	if codesignManager != nil {
+		log.Infof("Preparing code signing assets (certificates, profiles)")
+
+		xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
+		if err != nil {
+			failf("Failed to prepare code signing assets: %s", err)
+		}
+
+		if xcodebuildAuthParams != nil {
+			privateKey, err := xcodebuildAuthParams.WritePrivateKeyToFile()
+			if err != nil {
+				failf("%s", err)
+			}
+
+			defer func() {
+				if err := os.Remove(privateKey); err != nil {
+					log.Warnf("failed to remove private key file: %s", err)
+				}
+			}()
+
+			authOptions = &xcodebuild.AuthenticationParams{
+				KeyID:     xcodebuildAuthParams.KeyID,
+				IsssuerID: xcodebuildAuthParams.IssuerID,
+				KeyPath:   privateKey,
+			}
+		}
+	} else {
+		log.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
+	}
+
 	//
 	// Build
 	log.Infof("Build:")
@@ -162,6 +224,9 @@ func main() {
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(customOptions)
 	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
+	if authOptions != nil {
+		xcodeBuildCmd.SetAuthentication(*authOptions)
+	}
 
 	// save the build time frame to find the build generated artifacts
 	rawXcodebuildOut, buildInterval, xcodebuildErr := runCommandWithRetry(xcodeBuildCmd, cfg.LogFormatter == "xcpretty", swiftPackagesPath)
@@ -169,7 +234,7 @@ func main() {
 	if err := output.ExportOutputFileContent(rawXcodebuildOut, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
 		log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
 	}
-	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODEBUILD_LOG_PATH env: %s", rawXcodebuildOutputLogPath)
+	log.Donef("The xcodebuild command log file path is available in BITRISE_XCODE_RAW_RESULT_TEXT_PATH env: %s", rawXcodebuildOutputLogPath)
 
 	if xcodebuildErr != nil {
 		if cfg.LogFormatter == "xcpretty" {

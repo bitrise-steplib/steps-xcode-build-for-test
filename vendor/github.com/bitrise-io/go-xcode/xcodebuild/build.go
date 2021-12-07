@@ -1,7 +1,6 @@
 package xcodebuild
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/bitrise-io/go-utils/command"
@@ -42,20 +41,16 @@ type Action string
 type CommandBuilder struct {
 	commandFactory command.Factory
 
-	projectPath   string
-	isWorkspace   bool
-	scheme        string
-	configuration string
-	destination   string
-	xcconfigPath  string
+	projectPath    string
+	isWorkspace    bool
+	scheme         string
+	configuration  string
+	destination    string
+	xcconfigPath   string
+	authentication *AuthenticationParams
 
 	// buildsetting
-	forceDevelopmentTeam              string
-	forceProvisioningProfileSpecifier string
-	forceProvisioningProfile          string
-	forceCodeSignIdentity             string
-	disableCodesign                   bool
-	disableIndexWhileBuilding         bool
+	disableCodesign bool
 
 	// buildaction
 	customBuildActions []string
@@ -104,27 +99,9 @@ func (c *CommandBuilder) SetXCConfigPath(xcconfigPath string) *CommandBuilder {
 	return c
 }
 
-// SetForceDevelopmentTeam ...
-func (c *CommandBuilder) SetForceDevelopmentTeam(forceDevelopmentTeam string) *CommandBuilder {
-	c.forceDevelopmentTeam = forceDevelopmentTeam
-	return c
-}
-
-// SetForceProvisioningProfileSpecifier ...
-func (c *CommandBuilder) SetForceProvisioningProfileSpecifier(forceProvisioningProfileSpecifier string) *CommandBuilder {
-	c.forceProvisioningProfileSpecifier = forceProvisioningProfileSpecifier
-	return c
-}
-
-// SetForceProvisioningProfile ...
-func (c *CommandBuilder) SetForceProvisioningProfile(forceProvisioningProfile string) *CommandBuilder {
-	c.forceProvisioningProfile = forceProvisioningProfile
-	return c
-}
-
-// SetForceCodeSignIdentity ...
-func (c *CommandBuilder) SetForceCodeSignIdentity(forceCodeSignIdentity string) *CommandBuilder {
-	c.forceCodeSignIdentity = forceCodeSignIdentity
+// SetAuthentication ...
+func (c *CommandBuilder) SetAuthentication(authenticationParams AuthenticationParams) *CommandBuilder {
+	c.authentication = &authenticationParams
 	return c
 }
 
@@ -164,12 +141,6 @@ func (c *CommandBuilder) SetDisableCodesign(disable bool) *CommandBuilder {
 	return c
 }
 
-// SetDisableIndexWhileBuilding ...
-func (c *CommandBuilder) SetDisableIndexWhileBuilding(disable bool) *CommandBuilder {
-	c.disableIndexWhileBuilding = disable
-	return c
-}
-
 func (c *CommandBuilder) args() []string {
 	var slice []string
 
@@ -200,26 +171,6 @@ func (c *CommandBuilder) args() []string {
 
 	if c.disableCodesign {
 		slice = append(slice, "CODE_SIGNING_ALLOWED=NO")
-	} else {
-		if c.forceDevelopmentTeam != "" {
-			slice = append(slice, fmt.Sprintf("DEVELOPMENT_TEAM=%s", c.forceDevelopmentTeam))
-		}
-
-		if c.forceProvisioningProfileSpecifier != "" {
-			slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE_SPECIFIER=%s", c.forceProvisioningProfileSpecifier))
-		}
-
-		if c.forceProvisioningProfile != "" {
-			slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE=%s", c.forceProvisioningProfile))
-		}
-
-		if c.forceCodeSignIdentity != "" {
-			slice = append(slice, fmt.Sprintf("CODE_SIGN_IDENTITY=%s", c.forceCodeSignIdentity))
-		}
-	}
-
-	if c.disableIndexWhileBuilding {
-		slice = append(slice, "COMPILER_INDEX_STORE_ENABLE=NO")
 	}
 
 	slice = append(slice, c.customBuildActions...)
@@ -243,6 +194,10 @@ func (c *CommandBuilder) args() []string {
 
 	if c.resultBundlePath != "" {
 		slice = append(slice, "-resultBundlePath", c.resultBundlePath)
+	}
+
+	if c.authentication != nil {
+		slice = append(slice, c.authentication.args()...)
 	}
 
 	slice = append(slice, c.customOptions...)
