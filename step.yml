@@ -3,17 +3,18 @@ summary: Performs xcodebuild's build-for-testing action
 description: |-
   The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app so that you can, for example, upload it to a third-party testing service to run your app on a real device.
   The Step also creates an `.xctestrun` file.
-  To be able to run your app on a real device it needs code signing. The Step logs you into your Apple Developer account based on the [Apple service connection you provide on Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html) and downloads any provisioning profiles needed for your project based on the **Distribution method**.
+  To be able to run your tests on a real device it needs code signing. The **Automatic code signing method** Step input allows you to log you into your Apple Developer account based on the [Apple service connection you provide on Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html) and download any provisioning profiles needed for your project based on the **Distribution method**.
+  Please note that the **Automatic code signing method** input is by default set to `off`, so if you need code signing, select either the `api-key` or the `apple-id`option of the input.
 
   ### Configuring the Step
   Before you start:
   - Make sure you have connected your [Apple Service account to Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html).
-  Alternatively, you can upload certificates and profiles to Bitrise manually, then use the Certificate and Profile installer step before Xcode Archive
+  Alternatively, you can upload certificates and profiles to Bitrise manually, then use the Certificate and Profile installer step before this Step.
   - Make sure certificates are uploaded to Bitrise's **Code Signing** tab. The right provisioning profiles are automatically downloaded from Apple as part of the automatic code signing process.
 
   To configure the Step:
   1. **Project (or Workspace) path**: This is the path where the `.xcodeproj` or `.xcworkspace` files are localed.
-  2. **Scheme**: Add the scheme name you wish to archive your project later.
+  2. **Scheme**: Add the scheme name you wish to build for testing.
   3. **Build Configuration**: If not specified, the default Build Configuration will be used. The input value sets xcodebuild's `-configuration` option.
   4. **Device destination specifier**: Destination specifier describes the device to use as a destination. The input value sets xcodebuild's `-destination` option.
 
