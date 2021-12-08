@@ -1,7 +1,7 @@
 title: Xcode Build for testing for iOS
 summary: Performs xcodebuild's build-for-testing action
 description: |-
-  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app so that you can, for example, upload it to a third-party testing service to run your app on a real device. 
+  The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app so that you can, for example, upload it to a third-party testing service to run your app on a real device.
   The Step also creates an `.xctestrun` file.
   To be able to run your app on a real device it needs code signing. The Step logs you into your Apple Developer account based on the [Apple service connection you provide on Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html) and downloads any provisioning profiles needed for your project based on the **Distribution method**.
 
