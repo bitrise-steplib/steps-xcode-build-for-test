@@ -9,7 +9,7 @@ description: |-
   ### Configuring the Step
   Before you start:
   - Make sure you have connected your [Apple Service account to Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html).
-  Alternatively, you can upload certificates and profiles to Bitrise manually, then use the Certificate and Profile installer step before this Step.
+  Alternatively, you can upload certificates and profiles to Bitrise manually, then use the **Certificate and Profile Installer** Step before this Step.
   - Make sure certificates are uploaded to Bitrise's **Code Signing** tab. The right provisioning profiles are automatically downloaded from Apple as part of the automatic code signing process.
 
   To configure the Step:
