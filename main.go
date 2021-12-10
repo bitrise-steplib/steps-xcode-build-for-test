@@ -60,6 +60,7 @@ type Config struct {
 	KeychainPassword          stepconf.Secret `env:"keychain_password"`
 	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
 	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
+	TeamID                    string          `env:"apple_team_id"`
 	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
 	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
 }
