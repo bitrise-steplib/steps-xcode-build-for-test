@@ -57,7 +57,7 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 	opts := codesign.Opts{
 		AuthType:                   authType,
 		ShouldConsiderXcodeSigning: true,
-		TeamID:                     "",
+		TeamID:                     config.TeamID,
 		ExportMethod:               codesignConfig.DistributionMethod,
 		XcodeMajorVersion:          int(xcodeMajorVersion),
 		RegisterTestDevices:        config.RegisterTestDevices,

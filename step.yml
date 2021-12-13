@@ -204,6 +204,16 @@ inputs:
       Otherwise the Step renews the managed Provisioning Profile if it is expired.
     is_required: true
 
+- apple_team_id: ""
+  opts:
+    category: Automatic code signing
+    title: Developer Portal team ID
+    summary: The Apple Developer Portal team to use for downloading code signing assets.
+    description: |-
+      The Apple Developer Portal team to use for downloading code signing assets.
+
+      Defining this is only required when Automatic Code Signing is set to `apple-id` and the connected account belongs to multiple teams.
+
 - certificate_url_list: $BITRISE_CERTIFICATE_URL
   opts:
     category: Automatic code signing
