@@ -7,38 +7,51 @@ Performs xcodebuild's build-for-testing action
 <details>
 <summary>Description</summary>
 
-The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app for testing and also creates an `.xctestrun` file.
+The Step runs Xcode's `xcodebuild` command with the `build-for-testing` option. This builds your app and associated tests so that you can, for example, upload it to a third-party testing service to run your tests on a real device.
+The Step also creates an `.xctestrun` file.
+To be able to run your tests on a real device it needs code signing. The **Automatic code signing method** Step input allows you to log you into your Apple Developer account based on the [Apple service connection you provide on Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html) and download any provisioning profiles needed for your project based on the **Distribution method**.
+Please note that the **Automatic code signing method** input is by default set to `off`, so if you need code signing, select either the `api-key` or the `apple-id`option of the input.
 
 ### Configuring the Step
+Before you start:
+- Make sure you have connected your [Apple Service account to Bitrise](https://devcenter.bitrise.io/en/accounts/connecting-to-services/apple-services-connection.html).
+Alternatively, you can upload certificates and profiles to Bitrise manually, then use the **Certificate and Profile Installer** Step before this Step.
+- Make sure certificates are uploaded to Bitrise's **Code Signing** tab. The right provisioning profiles are automatically downloaded from Apple as part of the automatic code signing process.
 
-At a minimum, the Step needs valid values for three inputs:
+To configure the Step:
+1. **Project (or Workspace) path**: This is the path where the `.xcodeproj` or `.xcworkspace` files are localed.
+2. **Scheme**: Add the scheme name you wish to build for testing.
+3. **Build Configuration**: If not specified, the default Build Configuration will be used. The input value sets xcodebuild's `-configuration` option.
+4. **Device destination specifier**: Destination specifier describes the device to use as a destination. The input value sets xcodebuild's `-destination` option.
 
-- **Project (or Workspace) path**: This is the path to the `.xcodeproj` or `.xcworkspace` file. In most cases, leave it on the default value.
-- **Scheme name**: The name of your Xcode scheme. By default, the Step will use the scheme that was set when you added the app on Bitrise.
-- **Device destination**: The device and platform type to build the tests for. For available values call, `man xcodebuild` and check the Destinations section.
-We also recommend checking out our [System reports page](https://github.com/bitrise-io/bitrise.io/tree/master/system_reports) on GitHub: you can check out the available, pre-installed simulators and other tools.
+Under **xcodebuild configuration**
+5. **Build settings (xcconfig)**:  Build settings to override the project's build settings. The build settings must be separated by newline character (`\n`). For example:
+    ```
+    COMPILER_INDEX_STORE_ENABLE = NO
+    ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
+    ```
+The input value sets xcodebuild's `-xcconfig` option.
+6. **Additional options for the xcodebuild command**:  Additional options to be added to the executed xcodebuild command.
 
-Optionally, you can define the configuration to use in the **Configuration name** input. Normally, the scheme defines the configuration type, such as **debug** or **release**.
+Under **Xcode build log formatting**:
+1. **Log formatter**: Defines how `xcodebuild` command's log is formatted. Available options: `xcpretty`: The xcodebuild command's output will be prettified by xcpretty. `xcodebuild`: Only the last 20 lines of raw xcodebuild output will be visible in the build log. The raw xcodebuild log is exported in both cases.
 
-The Step can also cache your Swift PM dependencies. To enable caching, make sure the **Enable caching of Swift Package Manager packages** input is set to `swift_packages`.
+Under **Automatic code signing**:
+1. **Automatic code signing method**: Select the Apple service connection you want to use for code signing. Available options: `off` if you don't do automatic code signing, `api-key` [if you use API key authorization](https://devcenter.bitrise.io/en/accounts/connecting-to-services/connecting-to-an-apple-service-with-api-key.html), and `apple-id` [if you use Apple ID authorization](https://devcenter.bitrise.io/en/accounts/connecting-to-services/connecting-to-an-apple-service-with-apple-id.html).
+2. **Register test devices on the Apple Developer Portal**: If this input is set, the Step will register the known test devices on Bitrise from team members with the Apple Developer Portal. Note that setting this to `yes` may cause devices to be registered against your limited quantity of test devices in the Apple Developer Portal, which can only be removed once annually during your renewal window.
+3. **The minimum days the Provisioning Profile should be valid**: If this input is set to >0, the managed Provisioning Profile will be renewed if it expires within the configured number of days. Otherwise the Step renews the managed Provisioning Profile if it is expired.
+4. The **Code signing certificate URL**, the **Code signing certificate passphrase**, the **Keychain path**, and the **Keychain password** inputs are automatically populated if certificates are uploaded to Bitrise's **Code Signing** tab. If you store your files in a private repo, you can manually edit these fields.
 
-### Troubleshooting
+Under **Step Output configuration**:
+1. **Output directory path**: This directory contains the generated artifacts.
 
-In the **Debug** option group, you can:
+Under **Caching**:
+1. **Enable collecting cache content**: Defines what cache content should be automatically collected. Available options are:
+  - `none`: Disable collecting cache content
+  - `swift_packages`: Collect Swift PM packages added to the Xcode project
 
-- Add additional flags to the xcodebuild command.
-- Enable verbose logging.
-- Change the output directory path and the output tool.
-
-### Useful links
-
-- [Running Xcode tests](https://devcenter.bitrise.io/testing/running-xcode-tests/)
-- [Building from the Command Line with Xcode](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
-
-### Related Steps
-
-- [Xcode Test for iOS](https://www.bitrise.io/integrations/steps/xcode-test)
-- [Xcode Analyze](https://www.bitrise.io/integrations/steps/xcode-analyze)
+Under Debugging:
+1. **Verbose logging***: You can set this input to `yes` to produce more informative logs.
 </details>
 
 ## 🧩 Get started
@@ -64,6 +77,7 @@ You can also run this step directly with [Bitrise CLI](https://github.com/bitris
 | `automatic_code_signing` | This input determines which Bitrise Apple service connection should be used for automatic code signing.  Available values: - `off`: Do not do any auto code signing. - `api-key`: [Bitrise Apple Service connection with API Key](https://devcenter.bitrise.io/getting-started/connecting-to-services/setting-up-connection-to-an-apple-service-with-api-key/). - `apple-id`: [Bitrise Apple Service connection with Apple ID](https://devcenter.bitrise.io/getting-started/connecting-to-services/connecting-to-an-apple-service-with-apple-id/). | required | `off` |
 | `register_test_devices` | If this input is set, the Step will register the known test devices on Bitrise from team members with the Apple Developer Portal.  Note that setting this to yes may cause devices to be registered against your limited quantity of test devices in the Apple Developer Portal, which can only be removed once annually during your renewal window. | required | `no` |
 | `min_profile_validity` | If this input is set to >0, the managed Provisioning Profile will be renewed if it expires within the configured number of days.  Otherwise the Step renews the managed Provisioning Profile if it is expired. | required | `0` |
+| `apple_team_id` | The Apple Developer Portal team to use for downloading code signing assets.  Defining this is only required when Automatic Code Signing is set to `apple-id` and the connected account belongs to multiple teams. |  |  |
 | `certificate_url_list` | URL of the code signing certificate to download.  Multiple URLs can be specified, separated by a pipe (`\|`) character.  Local file path can be specified, using the `file://` URL scheme. | required, sensitive | `$BITRISE_CERTIFICATE_URL` |
 | `passphrase_list` | Passphrases for the provided code signing certificates.  Specify as many passphrases as many Code signing certificate URL provided, separated by a pipe (`\|`) character. | required, sensitive | `$BITRISE_CERTIFICATE_PASSPHRASE` |
 | `keychain_path` | Path to the Keychain where the code signing certificates will be installed. | required | `$HOME/Library/Keychains/login.keychain` |
