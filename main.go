@@ -7,18 +7,20 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-steputils/output"
-	"github.com/bitrise-io/go-steputils/stepconf"
 	"github.com/bitrise-io/go-steputils/tools"
-	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/env"
+	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/errorutil"
-	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
-	"github.com/bitrise-io/go-xcode/codesign"
+	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/env"
+	v2fileutil "github.com/bitrise-io/go-utils/v2/fileutil"
+	v2log "github.com/bitrise-io/go-utils/v2/log"
+	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
-	"github.com/bitrise-io/go-xcode/xcconfig"
+	"github.com/bitrise-io/go-xcode/v2/codesign"
+	"github.com/bitrise-io/go-xcode/v2/xcconfig"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
@@ -73,7 +75,7 @@ func main() {
 	if err := parser.Parse(&cfg); err != nil {
 		failf("Issue with input: %s", err)
 	}
-	logger := log.NewLogger()
+	logger := v2log.NewLogger()
 	logger.EnableDebugLog(cfg.VerboseLog)
 	log.SetEnableDebugLog(cfg.VerboseLog)
 
@@ -108,7 +110,6 @@ func main() {
 	if cfg.LogFormatter == "xcpretty" {
 		log.Infof("Output tool check:")
 
-		var xcpretty = xcpretty.NewXcpretty()
 		// check if already installed
 		if installed, err := xcpretty.IsInstalled(); err != nil {
 			log.Warnf(" Failed to check if xcpretty is installed, error: %s", err)
@@ -144,7 +145,7 @@ func main() {
 
 	// Detect Xcode major version
 	factory := command.NewFactory(env.NewRepository())
-	xcodebuildVersion, err := utility.GetXcodeVersion(factory)
+	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
 		failf("Failed to determin xcode version, error: %s", err)
 	}
@@ -212,13 +213,13 @@ func main() {
 		}
 	}
 
-	xcconfigWriter := xcconfig.NewWriter(pathutil.NewPathProvider(), fileutil.NewFileManager())
+	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
 	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
 	if err != nil {
 		failf(err.Error())
 	}
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "", factory)
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(absProjectPath, xcworkspace.IsWorkspace(absProjectPath), "")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
@@ -250,7 +251,7 @@ func main() {
 	// Export
 	log.Infof("Export:")
 
-	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(absProjectPath, factory)
+	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(absProjectPath)
 	buildSettingsCmd.SetScheme(cfg.Scheme)
 	buildSettingsCmd.SetConfiguration(cfg.Configuration)
 	buildSettingsCmd.SetCustomOptions(append([]string{"build-for-testing"}, customOptions...))
