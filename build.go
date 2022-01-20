@@ -36,15 +36,14 @@ func runCommandWithRetry(cmd *xcodebuild.CommandBuilder, useXcpretty bool, swift
 	return output, buildInterval, err
 }
 
-func prepareCommand(xcodeCmd *xcodebuild.CommandBuilder, useXcpretty bool, output *bytes.Buffer) (command.Command, *xcpretty.CommandModel) {
+func prepareCommand(xcodeCmd *xcodebuild.CommandBuilder, useXcpretty bool, output *bytes.Buffer) (*command.Model, *xcpretty.CommandModel) {
 	if useXcpretty {
 		return nil, xcpretty.New(*xcodeCmd)
 	}
 
-	buildRootCmd := xcodeCmd.Command(&command.Opts{
-		Stdout: io.MultiWriter(os.Stdout, output),
-		Stderr: io.MultiWriter(os.Stderr, output),
-	})
+	buildRootCmd := xcodeCmd.Command()
+	buildRootCmd.SetStdout(io.MultiWriter(os.Stdout, output))
+	buildRootCmd.SetStderr(io.MultiWriter(os.Stderr, output))
 
 	return buildRootCmd, nil
 }
