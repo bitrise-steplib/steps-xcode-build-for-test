@@ -132,8 +132,8 @@ workflows:
             if [[ $(arch) != "arm64" ]]; then
               exit 0
             fi
-            mv Library/Keychains/login.keychain-db Library/Keychains/login.keychain-db.backup
-            mv Library/Keychains/login_renamed_1.keychain-db Library/Keychains/login.keychain-db
+            mv $HOME/Library/Keychains/login.keychain-db Library/Keychains/login.keychain-db.backup
+            mv $HOME/Library/Keychains/login_renamed_1.keychain-db Library/Keychains/login.keychain-db
     - script:
         inputs:
         - content: |-
