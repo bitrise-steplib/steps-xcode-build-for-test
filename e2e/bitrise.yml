@@ -128,17 +128,6 @@ workflows:
         - content: |-
             #!/bin/env bash
             set -ex
-
-            if [[ $(arch) != "arm64" ]]; then
-              exit 0
-            fi
-            mv $HOME/Library/Keychains/login.keychain-db $HOME/Library/Keychains/login.keychain-db.backup
-            mv $HOME/Library/Keychains/login_renamed_1.keychain-db $HOME/Library/Keychains/login.keychain-db
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -ex
             rm -rf "$BITRISE_SOURCE_DIR/_tmp"
             mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
     - git::https://github.com/bitrise-steplib/bitrise-step-simple-git-clone.git:
