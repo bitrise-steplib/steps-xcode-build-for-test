@@ -112,7 +112,7 @@ func runSecurityCmd(factory command.Factory, args ...interface{}) error {
 		}
 	}
 
-	log.Debugf("$ security %s", cmdArgs)
+	log.Infof("$ security %s", cmdArgs)
 	out, err := factory.Create("security", cmdArgs, nil).RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		if errorutil.IsExitStatusError(err) {
