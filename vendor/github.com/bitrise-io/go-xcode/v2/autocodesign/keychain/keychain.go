@@ -66,7 +66,7 @@ func (k Keychain) InstallCertificate(cert certificateutil.CertificateInfoModel, 
 		return err
 	}
 
-	runSecurityCmd(k.factory, "unlock -p", k.password, k.path)
+	runSecurityCmd(k.factory, "unlock-keychain", "-p", k.password, k.path)
 
 	if err := k.importCertificate(pth, "bitrise"); err != nil {
 		return err
@@ -114,7 +114,7 @@ func runSecurityCmd(factory command.Factory, args ...interface{}) error {
 		}
 	}
 
-	log.Infof("$ security %s", cmdArgs)
+	log.Infof("$ security %s", printableArgs)
 	out, err := factory.Create("security", cmdArgs, nil).RunAndReturnTrimmedCombinedOutput()
 	log.Infof("output: %s", out)
 	if err != nil {
