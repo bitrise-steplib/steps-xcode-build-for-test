@@ -10,7 +10,6 @@ import (
 	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/hashicorp/go-version"
@@ -66,7 +65,9 @@ func (k Keychain) InstallCertificate(cert certificateutil.CertificateInfoModel, 
 		return err
 	}
 
-	runSecurityCmd(k.factory, "unlock-keychain", "-p", k.password, k.path)
+	if err := k.unlock(); err != nil {
+		return err
+	}
 
 	if err := k.importCertificate(pth, "bitrise"); err != nil {
 		return err
@@ -88,11 +89,7 @@ func (k Keychain) InstallCertificate(cert certificateutil.CertificateInfoModel, 
 		return err
 	}
 
-	if err := k.setAsDefault(); err != nil {
-		return err
-	}
-
-	return k.unlock()
+	return k.setAsDefault()
 }
 
 func runSecurityCmd(factory command.Factory, args ...interface{}) error {
@@ -114,9 +111,7 @@ func runSecurityCmd(factory command.Factory, args ...interface{}) error {
 		}
 	}
 
-	log.Infof("$ security %s", printableArgs)
 	out, err := factory.Create("security", cmdArgs, nil).RunAndReturnTrimmedCombinedOutput()
-	log.Infof("output: %s", out)
 	if err != nil {
 		if errorutil.IsExitStatusError(err) {
 			return fmt.Errorf("%s failed: %s", strings.Join(append([]string{"security"}, printableArgs...), " "), out)
