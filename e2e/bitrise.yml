@@ -128,7 +128,7 @@ workflows:
         - content: |-
             #!/bin/env bash
             set -ex
-            
+
             if [[ $(arch) != "arm64 ]]; then
               exit 0
             fi
