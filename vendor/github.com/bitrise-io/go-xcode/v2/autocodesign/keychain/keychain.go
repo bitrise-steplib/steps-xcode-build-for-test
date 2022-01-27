@@ -66,6 +66,8 @@ func (k Keychain) InstallCertificate(cert certificateutil.CertificateInfoModel, 
 		return err
 	}
 
+	runSecurityCmd(k.factory, "unlock -p", k.password, k.path)
+
 	if err := k.importCertificate(pth, "bitrise"); err != nil {
 		return err
 	}
