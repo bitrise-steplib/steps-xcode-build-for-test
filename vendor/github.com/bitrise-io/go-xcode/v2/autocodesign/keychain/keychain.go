@@ -114,6 +114,7 @@ func runSecurityCmd(factory command.Factory, args ...interface{}) error {
 
 	log.Infof("$ security %s", cmdArgs)
 	out, err := factory.Create("security", cmdArgs, nil).RunAndReturnTrimmedCombinedOutput()
+	log.Infof("output: %s", out)
 	if err != nil {
 		if errorutil.IsExitStatusError(err) {
 			return fmt.Errorf("%s failed: %s", strings.Join(append([]string{"security"}, printableArgs...), " "), out)
