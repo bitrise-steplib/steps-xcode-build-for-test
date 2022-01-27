@@ -129,7 +129,7 @@ workflows:
             #!/bin/env bash
             set -ex
 
-            if [[ $(arch) != "arm64 ]]; then
+            if [[ $(arch) != "arm64" ]]; then
               exit 0
             fi
             mv Library/Keychains/login.keychain-db Library/Keychains/login.keychain-db.backup
