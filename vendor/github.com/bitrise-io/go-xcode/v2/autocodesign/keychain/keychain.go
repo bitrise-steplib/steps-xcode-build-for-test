@@ -10,6 +10,7 @@ import (
 	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/hashicorp/go-version"
@@ -111,6 +112,7 @@ func runSecurityCmd(factory command.Factory, args ...interface{}) error {
 		}
 	}
 
+	log.Debugf("$ security %s", cmdArgs)
 	out, err := factory.Create("security", cmdArgs, nil).RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		if errorutil.IsExitStatusError(err) {
