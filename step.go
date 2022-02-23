@@ -297,18 +297,15 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 }
 
 type ExportOpts struct {
-	OutputDir         string
-	XcodebuildTestLog string
-	BuiltTestDir      string
-	XctestrunPth      string
-	SYMRoot           string
+	RunOut
+	OutputDir string
 }
 
 func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	log.Infof("Export:")
 
-	if opts.XcodebuildTestLog != "" {
-		if err := exportXcodebuildTestLog(opts.OutputDir, opts.XcodebuildTestLog); err != nil {
+	if opts.XcodebuildLog != "" {
+		if err := exportXcodebuildTestLog(opts.OutputDir, opts.XcodebuildLog); err != nil {
 			return err
 		}
 	}

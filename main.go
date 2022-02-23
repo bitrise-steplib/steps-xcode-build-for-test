@@ -25,15 +25,10 @@ func run() int {
 	}
 
 	runOut, runErr := s.Run(cfg)
-
-	exportOpts := ExportOpts{
-		OutputDir:         cfg.OutputDir,
-		XcodebuildTestLog: runOut.XcodebuildLog,
-		BuiltTestDir:      runOut.BuiltTestDir,
-		XctestrunPth:      runOut.XctestrunPth,
-		SYMRoot:           runOut.SYMRoot,
-	}
-	exportErr := s.ExportOutput(exportOpts)
+	exportErr := s.ExportOutput(ExportOpts{
+		OutputDir: cfg.OutputDir,
+		RunOut:    runOut,
+	})
 
 	if runErr != nil {
 		log.Errorf("Run: %s", runErr)
