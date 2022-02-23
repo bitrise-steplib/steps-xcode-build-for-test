@@ -42,44 +42,47 @@ const (
 
 // Input ...
 type Input struct {
-	ProjectPath       string `env:"project_path,required"`
-	Scheme            string `env:"scheme,required"`
-	Configuration     string `env:"configuration"`
-	Destination       string `env:"destination,required"`
+	ProjectPath   string `env:"project_path,required"`
+	Scheme        string `env:"scheme,required"`
+	Configuration string `env:"configuration"`
+	Destination   string `env:"destination,required"`
+	// xcodebuild configuration
 	XCConfigContent   string `env:"xcconfig_content"`
 	XcodebuildOptions string `env:"xcodebuild_options"`
-
+	// xcodebuild log formatting
 	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
-	OutputDir    string `env:"output_dir,required"`
-	CacheLevel   string `env:"cache_level,opt[none,swift_packages]"`
-	VerboseLog   bool   `env:"verbose_log,opt[yes,no]"`
-
+	// Automatic code signing
 	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
+	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
+	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
+	TeamID                    string          `env:"apple_team_id"`
 	CertificateURLList        string          `env:"certificate_url_list"`
 	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
 	KeychainPath              string          `env:"keychain_path"`
 	KeychainPassword          stepconf.Secret `env:"keychain_password"`
-	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
-	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
-	TeamID                    string          `env:"apple_team_id"`
 	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
 	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	// Step output configuration
+	OutputDir string `env:"output_dir,required"`
+	// Caching
+	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
+	// Debugging
+	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
 }
 
 type Config struct {
-	ProjectPath       string
-	Scheme            string
-	Configuration     string
-	Destination       string
-	XCConfigContent   string
-	XcodebuildOptions []string
-
+	ProjectPath            string
+	Scheme                 string
+	Configuration          string
+	Destination            string
+	XCConfigContent        string
+	XcodebuildOptions      []string
 	XCPretty               bool
-	SwiftPackagesPath      string
+	CodesignManager        *codesign.Manager
 	OutputDir              string
 	XcodebuildMajorVersion int
 	CacheLevel             string
-	CodesignManager        *codesign.Manager
+	SwiftPackagesPath      string
 }
 
 type TestBuilder struct {
@@ -170,20 +173,18 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	}
 
 	return Config{
-		XCPretty:          input.LogFormatter == "xcpretty",
-		CodesignManager:   codesignManager,
-		SwiftPackagesPath: swiftPackagesPath,
-		OutputDir:         absOutputDir,
-
-		ProjectPath:       absProjectPath,
-		Scheme:            input.Scheme,
-		Configuration:     input.Configuration,
-		Destination:       input.Destination,
-		XcodebuildOptions: customOptions,
-		XCConfigContent:   input.XCConfigContent,
-
+		ProjectPath:            absProjectPath,
+		Scheme:                 input.Scheme,
+		Configuration:          input.Configuration,
+		Destination:            input.Destination,
+		XCConfigContent:        input.XCConfigContent,
+		XcodebuildOptions:      customOptions,
+		XCPretty:               input.LogFormatter == "xcpretty",
+		CodesignManager:        codesignManager,
+		OutputDir:              absOutputDir,
 		XcodebuildMajorVersion: int(xcodebuildVersion.MajorVersion),
 		CacheLevel:             input.CacheLevel,
+		SwiftPackagesPath:      swiftPackagesPath,
 	}, nil
 }
 
@@ -194,40 +195,37 @@ func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 	}
 
 	fmt.Println()
-	log.Infof("Checking if log formatter (xcpretty) is installed")
+	log.Infof("Checking if output tool (xcpretty) is installed")
+	formatter := xcpretty.NewXcpretty()
 
-	var xcpretty = xcpretty.NewXcpretty()
-
-	installed, err := xcpretty.IsInstalled()
+	installed, err := formatter.IsInstalled()
 	if err != nil {
-		return fmt.Errorf("failed to check if xcpretty is installed, error: %s", err)
-	} else if !installed {
-		log.Warnf(`xcpretty is not installed`)
+		return err
+	}
+
+	if !installed {
+		log.Warnf("xcpretty is not installed")
 		fmt.Println()
 		log.Printf("Installing xcpretty")
 
-		cmds, err := xcpretty.Install()
+		cmdModelSlice, err := formatter.Install()
 		if err != nil {
-			return fmt.Errorf("failed to create xcpretty install command: %s", err)
+			return fmt.Errorf("failed to create xcpretty install commands: %w", err)
 		}
 
-		for _, cmd := range cmds {
-			if out, err := cmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
-				if errorutil.IsExitStatusError(err) {
-					return fmt.Errorf("%s failed: %s", cmd.PrintableCommandArgs(), out)
-				}
-				return fmt.Errorf("%s failed: %s", cmd.PrintableCommandArgs(), err)
+		for _, cmd := range cmdModelSlice {
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to run xcpretty install command (%s): %w", cmd.PrintableCommandArgs(), err)
 			}
 		}
-
 	}
 
-	xcprettyVersion, err := xcpretty.Version()
+	xcprettyVersion, err := formatter.Version()
 	if err != nil {
-		return fmt.Errorf("failed to determine xcpretty version, error: %s", err)
+		return fmt.Errorf("failed to get xcpretty version: %w", err)
 	}
-	log.Printf("- xcprettyVersion: %s", xcprettyVersion.String())
 
+	log.Printf("- xcpretty version: %s", xcprettyVersion.String())
 	return nil
 }
 
