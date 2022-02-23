@@ -33,14 +33,14 @@ import (
 
 const (
 	xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+)
 
-	// Code Signing Authentication Source
+const (
 	codeSignSourceOff     = "off"
 	codeSignSourceAPIKey  = "api-key"
 	codeSignSourceAppleID = "apple-id"
 )
 
-// Input ...
 type Input struct {
 	ProjectPath   string `env:"project_path,required"`
 	Scheme        string `env:"scheme,required"`
@@ -107,28 +107,26 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 
 	absProjectPath, err := filepath.Abs(input.ProjectPath)
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to expand ProjectPath (%s), error: %s", input.ProjectPath, err)
+		return Config{}, fmt.Errorf("failed to expand project path (%s): %w", input.ProjectPath, err)
 	}
 
-	// abs out dir pth
 	absOutputDir, err := pathutil.AbsPath(input.OutputDir)
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to expand OutputDir (%s), error: %s", input.OutputDir, err)
+		return Config{}, fmt.Errorf("failed to expand output dir (%s): %w", input.OutputDir, err)
 	}
 
 	if exist, err := pathutil.IsPathExists(absOutputDir); err != nil {
-		return Config{}, fmt.Errorf("failed to check if OutputDir exist, error: %s", err)
+		return Config{}, fmt.Errorf("failed to check if output dir exist: %w", err)
 	} else if !exist {
 		if err := os.MkdirAll(absOutputDir, 0777); err != nil {
-			return Config{}, fmt.Errorf("failed to create OutputDir (%s), error: %s", absOutputDir, err)
+			return Config{}, fmt.Errorf("failed to create output dir (%s): %w", absOutputDir, err)
 		}
 	}
 
-	// Detect Xcode major version
 	factory := v2command.NewFactory(env.NewRepository())
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to determin xcode version, error: %s", err)
+		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
 	}
 	log.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 
@@ -136,7 +134,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	if xcodebuildVersion.MajorVersion >= 11 {
 		var err error
 		if swiftPackagesPath, err = cache.SwiftPackagesPath(absProjectPath); err != nil {
-			return Config{}, fmt.Errorf("failed to get Swift Packages path, error: %s", err)
+			return Config{}, fmt.Errorf("failed to get swift packages path: %w", err)
 		}
 	}
 
@@ -144,27 +142,27 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	if input.XcodebuildOptions != "" {
 		customOptions, err = shellquote.Split(input.XcodebuildOptions)
 		if err != nil {
-			return Config{}, fmt.Errorf("failed to shell split XcodebuildOptions (%s), error: %s", input.XcodebuildOptions, err)
+			return Config{}, fmt.Errorf("failed to parse additional options (%s): %w", input.XcodebuildOptions, err)
 		}
 	}
 
-	var codesignManager *codesign.Manager = nil
+	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
+			ProjectPath:               absProjectPath,
+			Scheme:                    input.Scheme,
+			Configuration:             input.Configuration,
 			CodeSigningAuthSource:     input.CodeSigningAuthSource,
+			RegisterTestDevices:       input.RegisterTestDevices,
+			MinDaysProfileValid:       input.MinDaysProfileValid,
+			TeamID:                    input.TeamID,
 			CertificateURLList:        input.CertificateURLList,
 			CertificatePassphraseList: input.CertificatePassphraseList,
 			KeychainPath:              input.KeychainPath,
 			KeychainPassword:          input.KeychainPassword,
 			BuildURL:                  input.BuildURL,
 			BuildAPIToken:             input.BuildAPIToken,
-			TeamID:                    input.TeamID,
-			RegisterTestDevices:       input.RegisterTestDevices,
-			MinDaysProfileValid:       input.MinDaysProfileValid,
 			VerboseLog:                input.VerboseLog,
-			ProjectPath:               absProjectPath,
-			Scheme:                    input.Scheme,
-			Configuration:             input.Configuration,
 		}, xcodebuildVersion.MajorVersion, logger, factory)
 		if err != nil {
 			return Config{}, err

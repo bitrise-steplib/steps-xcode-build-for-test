@@ -18,21 +18,20 @@ import (
 )
 
 type CodesignManagerOpts struct {
+	ProjectPath               string
+	Scheme                    string
+	Configuration             string
 	CodeSigningAuthSource     string
+	RegisterTestDevices       bool
+	MinDaysProfileValid       int
+	TeamID                    string
 	CertificateURLList        string
 	CertificatePassphraseList stepconf.Secret
 	KeychainPath              string
 	KeychainPassword          stepconf.Secret
 	BuildURL                  string
 	BuildAPIToken             stepconf.Secret
-	TeamID                    string
-	RegisterTestDevices       bool
-	MinDaysProfileValid       int
 	VerboseLog                bool
-
-	ProjectPath   string
-	Scheme        string
-	Configuration string
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
