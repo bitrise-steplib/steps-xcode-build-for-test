@@ -24,29 +24,14 @@ func run() int {
 		cfg.XCPretty = false
 	}
 
-	runOpts := RunOpts{
-		XCPretty:          cfg.XCPretty,
-		CodesignManager:   cfg.CodesignManager,
-		SwiftPackagesPath: cfg.SwiftPackagesPath,
-		OutputDir:         cfg.OutputDir,
-		ProjectPath:       cfg.ProjectPath,
-		Scheme:            cfg.Scheme,
-		Configuration:     cfg.Configuration,
-		Destination:       cfg.Destination,
-		XCConfigContent:   cfg.XCConfigContent,
-		XcodebuildOptions: cfg.XcodebuildOptions,
-	}
-	runOut, runErr := s.Run(runOpts)
+	runOut, runErr := s.Run(cfg)
 
 	exportOpts := ExportOpts{
 		OutputDir:         cfg.OutputDir,
-		ProjectPath:       cfg.ProjectPath,
-		Scheme:            cfg.Scheme,
-		Configuration:     cfg.Configuration,
-		XcodebuildOptions: cfg.XcodebuildOptions,
-		CacheLevel:        cfg.CacheLevel,
-		BuildInterval:     runOut.BuildInterval,
 		XcodebuildTestLog: runOut.XcodebuildLog,
+		BuiltTestDir:      runOut.BuiltTestDir,
+		XctestrunPth:      runOut.XctestrunPth,
+		SYMRoot:           runOut.SYMRoot,
 	}
 	exportErr := s.ExportOutput(exportOpts)
 

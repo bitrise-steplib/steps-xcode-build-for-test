@@ -1,21 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/bitrise-io/go-steputils/output"
 	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
-	"github.com/bitrise-io/go-utils/colorstring"
-	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/errorutil"
-	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-utils/stringutil"
 	v2command "github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
 	v2fileutil "github.com/bitrise-io/go-utils/v2/fileutil"
@@ -227,108 +224,86 @@ func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 	return nil
 }
 
-// RunOpts ...
-type RunOpts struct {
-	XCPretty          bool
-	CodesignManager   *codesign.Manager
-	SwiftPackagesPath string
-	OutputDir         string
-
-	ProjectPath       string
-	Scheme            string
-	Configuration     string
-	Destination       string
-	XCConfigContent   string
-	XcodebuildOptions []string
-}
-
-// RunOut ...
 type RunOut struct {
-	BuildInterval timeInterval
 	XcodebuildLog string
+	BuiltTestDir  string
+	XctestrunPth  string
+	SYMRoot       string
 }
 
-// Run ...
-func (b TestBuilder) Run(opts RunOpts) (RunOut, error) {
-	//
-	// Manage code signing
-	var authOptions *xcodebuild.AuthenticationParams = nil
-	if opts.CodesignManager != nil {
-		log.Infof("Preparing code signing assets (certificates, profiles)")
-
-		xcodebuildAuthParams, err := opts.CodesignManager.PrepareCodesigning()
-		if err != nil {
-			return RunOut{}, fmt.Errorf("failed to prepare code signing assets: %s", err)
-		}
-
-		if xcodebuildAuthParams != nil {
-			privateKey, err := xcodebuildAuthParams.WritePrivateKeyToFile()
-			if err != nil {
-				return RunOut{}, err
-			}
-
-			defer func() {
-				if err := os.Remove(privateKey); err != nil {
-					log.Warnf("failed to remove private key file: %s", err)
-				}
-			}()
-
-			authOptions = &xcodebuild.AuthenticationParams{
-				KeyID:     xcodebuildAuthParams.KeyID,
-				IsssuerID: xcodebuildAuthParams.IssuerID,
-				KeyPath:   privateKey,
-			}
-		}
-	} else {
-		log.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
-	}
-
-	//
-	// Build
-	log.Infof("Build:")
-
-	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
-	xcconfigPath, err := xcconfigWriter.Write(opts.XCConfigContent)
+func (b TestBuilder) Run(cfg Config) (RunOut, error) {
+	// Automatic code signing
+	authOptions, err := b.automaticCodeSigning(cfg.CodesignManager)
 	if err != nil {
 		return RunOut{}, err
 	}
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(opts.ProjectPath, xcworkspace.IsWorkspace(opts.ProjectPath), "")
-	xcodeBuildCmd.SetScheme(opts.Scheme)
-	xcodeBuildCmd.SetConfiguration(opts.Configuration)
+	// Build for testing
+	log.Infof("Build:")
+
+	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
+	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
+	if err != nil {
+		return RunOut{}, err
+	}
+
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
+	xcodeBuildCmd.SetScheme(cfg.Scheme)
+	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
-	xcodeBuildCmd.SetDestination(opts.Destination)
-	xcodeBuildCmd.SetCustomOptions(opts.XcodebuildOptions)
+	xcodeBuildCmd.SetDestination(cfg.Destination)
+	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
 	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
 	if authOptions != nil {
 		xcodeBuildCmd.SetAuthentication(*authOptions)
 	}
 
-	// save the build time frame to find the build generated artifacts
-	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, opts.XCPretty, opts.SwiftPackagesPath)
-	if err != nil || !opts.XCPretty {
+	result := RunOut{}
+	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.XCPretty, cfg.SwiftPackagesPath)
+	if err != nil || !cfg.XCPretty {
 		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil)
 	}
 
-	return RunOut{
-		BuildInterval: buildInterval,
-		XcodebuildLog: rawXcodebuildOut,
-	}, nil
+	result.XcodebuildLog = rawXcodebuildOut
+
+	if err != nil {
+		return result, err
+	}
+
+	// Cache swift packages
+	if cfg.CacheLevel == "swift_packages" {
+		if err := cache.CollectSwiftPackages(cfg.ProjectPath); err != nil {
+			log.Warnf("Failed to mark swift packages for caching, error: %s", err)
+		}
+	}
+
+	// Find outputs
+	testBundle, err := b.findTestBundle(findTestBundleOpts{
+		ProjectPath:       cfg.ProjectPath,
+		Scheme:            cfg.Scheme,
+		Configuration:     cfg.Configuration,
+		XcodebuildOptions: cfg.XcodebuildOptions,
+		BuildInterval:     buildInterval,
+	})
+	if err != nil {
+		return result, err
+	}
+
+	result.BuiltTestDir = testBundle.BuiltTestDir
+	result.XctestrunPth = testBundle.XctestrunPth
+	result.SYMRoot = testBundle.SYMRoot
+
+	return result, nil
 }
 
-// ExportOpts ...
 type ExportOpts struct {
 	OutputDir         string
-	ProjectPath       string
-	Scheme            string
-	Configuration     string
-	XcodebuildOptions []string
-	BuildInterval     timeInterval
-	CacheLevel        string
 	XcodebuildTestLog string
+	BuiltTestDir      string
+	XctestrunPth      string
+	SYMRoot           string
 }
 
-// ExportOutput ...
 func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	log.Infof("Export:")
 
@@ -338,6 +313,96 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 		}
 	}
 
+	if opts.BuiltTestDir == "" {
+		return nil
+	}
+
+	// Test bundle
+	outputTestDirPath := filepath.Join(opts.OutputDir, filepath.Base(opts.BuiltTestDir))
+	if err := output.ExportOutputDir(opts.BuiltTestDir, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
+		return fmt.Errorf("failed to export BITRISE_TEST_DIR_PATH: %w", err)
+	}
+	log.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
+
+	// Zipped test bundle
+	outputTestBundleZipPath := filepath.Join(opts.OutputDir, "testbundle.zip")
+	factory := v2command.NewFactory(env.NewRepository())
+	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(opts.BuiltTestDir), filepath.Base(opts.XctestrunPth)}, &v2command.Opts{
+		Dir: opts.SYMRoot,
+	})
+	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
+		var exerr *exec.ExitError
+		if errors.As(err, &exerr) {
+			return fmt.Errorf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
+		}
+		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
+	}
+	log.Printf("Zipped test bundle: %s", outputTestBundleZipPath)
+	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
+		return fmt.Errorf("failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %w", err)
+	}
+	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
+
+	// xctestrun
+	outputXCTestrunPth := filepath.Join(opts.OutputDir, filepath.Base(opts.XctestrunPth))
+	if err := output.ExportOutputFile(opts.XctestrunPth, outputXCTestrunPth, "BITRISE_XCTESTRUN_FILE_PATH"); err != nil {
+		return fmt.Errorf("failed to export BITRISE_XCTESTRUN_FILE_PATH: %w", err)
+	}
+	log.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
+
+	return nil
+}
+
+func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
+	if codesignManager == nil {
+		log.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
+		return nil, nil
+	}
+
+	log.Infof("Preparing code signing assets (certificates, profiles)")
+
+	xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare code signing assets: %w", err)
+	}
+
+	if xcodebuildAuthParams != nil {
+		privateKey, err := xcodebuildAuthParams.WritePrivateKeyToFile()
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() {
+			if err := os.Remove(privateKey); err != nil {
+				log.Warnf("failed to remove private key file: %s", err)
+			}
+		}()
+
+		return &xcodebuild.AuthenticationParams{
+			KeyID:     xcodebuildAuthParams.KeyID,
+			IsssuerID: xcodebuildAuthParams.IssuerID,
+			KeyPath:   privateKey,
+		}, nil
+	}
+
+	return nil, nil
+}
+
+type findTestBundleOpts struct {
+	ProjectPath       string
+	Scheme            string
+	Configuration     string
+	XcodebuildOptions []string
+	BuildInterval     timeInterval
+}
+
+type testBundle struct {
+	BuiltTestDir string
+	XctestrunPth string
+	SYMRoot      string
+}
+
+func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
 	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(opts.ProjectPath)
 	buildSettingsCmd.SetScheme(opts.Scheme)
 	buildSettingsCmd.SetConfiguration(opts.Configuration)
@@ -348,19 +413,19 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 
 	buildSettings, err := buildSettingsCmd.RunAndReturnSettings()
 	if err != nil {
-		return fmt.Errorf("failed to read build settings: %s", err)
+		return testBundle{}, fmt.Errorf("failed to read build settings: %w", err)
 	}
 
 	// The path at which all products will be placed when performing a build. Typically this path is not set per target, but is set per-project or per-user.
 	symRoot, err := buildSettings.String("SYMROOT")
 	if err != nil {
-		return fmt.Errorf("failed to parse SYMROOT build setting: %s", err)
+		return testBundle{}, fmt.Errorf("failed to get SYMROOT build setting: %w", err)
 	}
 	log.Printf("SYMROOT: %s", symRoot)
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
-		return fmt.Errorf("failed to parse CONFIGURATION build setting: %s", err)
+		return testBundle{}, fmt.Errorf("failed to get CONFIGURATION build setting: %w", err)
 	}
 	log.Printf("CONFIGURATION: %s", configuration)
 
@@ -368,19 +433,19 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", opts.Scheme))
 	xctestrunPths, err := filepath.Glob(xctestrunPthPattern)
 	if err != nil {
-		return fmt.Errorf("failed to search for xctestrun file using pattern: %s, error: %s", xctestrunPthPattern, err)
+		return testBundle{}, fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
 	}
 	log.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
 
 	if len(xctestrunPths) == 0 {
-		return fmt.Errorf("no xctestrun file found with pattern: %s", xctestrunPthPattern)
+		return testBundle{}, fmt.Errorf("no xctestrun file found with pattern: %s", xctestrunPthPattern)
 	}
 
 	var buildXCTestrunPths []string
 	for _, xctestrunPth := range xctestrunPths {
 		info, err := os.Stat(xctestrunPth)
 		if err != nil {
-			return fmt.Errorf("failed to check %s modtime: %s", xctestrunPth, err)
+			return testBundle{}, fmt.Errorf("failed to check %s modtime: %w", xctestrunPth, err)
 		}
 
 		if !info.ModTime().Before(opts.BuildInterval.start) && !info.ModTime().After(opts.BuildInterval.end) {
@@ -389,9 +454,9 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	}
 
 	if len(buildXCTestrunPths) == 0 {
-		return fmt.Errorf("no xctestrun file generated during the build")
+		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
 	} else if len(buildXCTestrunPths) > 1 {
-		return fmt.Errorf("multiple xctestrun file generated during the build:\n%s", strings.Join(buildXCTestrunPths, "\n- "))
+		return testBundle{}, fmt.Errorf("multiple xctestrun file generated during the build:\n%s", strings.Join(buildXCTestrunPths, "\n- "))
 	}
 
 	xctestrunPth := buildXCTestrunPths[0]
@@ -408,102 +473,15 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 
 	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
 	if exist, err := pathutil.IsPathExists(builtTestDir); err != nil {
-		return fmt.Errorf("failed to check if built test directory exists at: %s, error: %s", builtTestDir, err)
+		return testBundle{}, fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
 	} else if !exist {
-		return fmt.Errorf("built test directory does not exist at: %s", builtTestDir)
+		return testBundle{}, fmt.Errorf("built test directory does not exist at: %s", builtTestDir)
 	}
 	log.Printf("Built test directory: %s", builtTestDir)
 
-	outputTestBundleZipPath := filepath.Join(opts.OutputDir, "testbundle.zip")
-	factory := v2command.NewFactory(env.NewRepository())
-	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(builtTestDir), filepath.Base(xctestrunPth)}, &v2command.Opts{
-		Dir: symRoot,
-	})
-	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
-		if errorutil.IsExitStatusError(err) {
-			return fmt.Errorf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
-		} else {
-			return fmt.Errorf("%s failed: %s", zipCmd.PrintableCommandArgs(), err)
-		}
-	}
-	log.Printf("Zipped test bundle: %s", outputTestBundleZipPath)
-
-	outputXCTestrunPth := filepath.Join(opts.OutputDir, filepath.Base(xctestrunPth))
-	if err := output.ExportOutputFile(xctestrunPth, outputXCTestrunPth, "BITRISE_XCTESTRUN_FILE_PATH"); err != nil {
-		return fmt.Errorf("failed to export BITRISE_XCTESTRUN_FILE_PATH: %s", err)
-	}
-	log.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
-
-	outputTestDirPath := filepath.Join(opts.OutputDir, filepath.Base(builtTestDir))
-	if err := output.ExportOutputDir(builtTestDir, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
-		return fmt.Errorf("failed to export BITRISE_TEST_DIR_PATH: %s", err)
-	}
-	log.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
-
-	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
-		return fmt.Errorf("failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %s", err)
-	}
-
-	// Cache swift PM
-	if opts.CacheLevel == "swift_packages" {
-		if err := cache.CollectSwiftPackages(opts.ProjectPath); err != nil {
-			log.Warnf("Failed to mark swift packages for caching, error: %s", err)
-		}
-	}
-
-	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
-	return nil
-}
-
-func printLastLinesOfXcodebuildTestLog(rawXcodebuildOutput string, isRunSuccess bool) {
-	const lastLines = "\nLast lines of the build log:"
-	if !isRunSuccess {
-		log.Errorf(lastLines)
-	} else {
-		log.Infof(lastLines)
-	}
-
-	fmt.Println(stringutil.LastNLines(rawXcodebuildOutput, 20))
-
-	if !isRunSuccess {
-		log.Warnf("If you can't find the reason of the error in the log, please check the xcodebuild_test.log.")
-	}
-
-	log.Infof(colorstring.Magenta(`
-The log file is stored in $BITRISE_DEPLOY_DIR, and its full path
-is available in the $BITRISE_XCODEBUILD_TEST_LOG_PATH environment variable.
-If you have the Deploy to Bitrise.io step (after this step),
-that will attach the file to your build as an artifact!`))
-}
-
-func exportXcodebuildTestLog(deployDir, xcodebuildTestLog string) error {
-	pth, err := saveRawOutputToLogFile(xcodebuildTestLog)
-	if err != nil {
-		log.Warnf("Failed to save the Raw Output, error: %s", err)
-	}
-
-	deployPth := filepath.Join(deployDir, "xcodebuild_test.log")
-	if err := command.CopyFile(pth, deployPth); err != nil {
-		return fmt.Errorf("failed to copy xcodebuild output log file from (%s) to (%s), error: %s", pth, deployPth, err)
-	}
-
-	if err := tools.ExportEnvironmentWithEnvman(xcodebuildLogPath, deployPth); err != nil {
-		log.Warnf("Failed to export: %s, error: %s", xcodebuildLogPath, err)
-	}
-
-	return nil
-}
-
-func saveRawOutputToLogFile(rawXcodebuildOutput string) (string, error) {
-	tmpDir, err := pathutil.NormalizedOSTempDirPath("xcodebuild-output")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp dir, error: %s", err)
-	}
-	logFileName := "raw-xcodebuild-output.log"
-	logPth := filepath.Join(tmpDir, logFileName)
-	if err := fileutil.WriteStringToFile(logPth, rawXcodebuildOutput); err != nil {
-		return "", fmt.Errorf("failed to write xcodebuild output to file, error: %s", err)
-	}
-
-	return logPth, nil
+	return testBundle{
+		BuiltTestDir: builtTestDir,
+		XctestrunPth: xctestrunPth,
+		SYMRoot:      symRoot,
+	}, nil
 }
