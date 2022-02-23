@@ -19,7 +19,7 @@ func run() int {
 	}
 
 	if err := s.InstallDependencies(cfg.XCPretty); err != nil {
-		log.Warnf("Failed to install deps: %s", err)
+		log.Warnf("Install dependencies: %s", err)
 		log.Printf("Switching to xcodebuild for output tool")
 		cfg.XCPretty = false
 	}
@@ -51,10 +51,10 @@ func run() int {
 	exportErr := s.ExportOutput(exportOpts)
 
 	if runErr != nil {
-		log.Errorf(runErr.Error())
+		log.Errorf("Run: %s", runErr)
 	}
 	if exportErr != nil {
-		log.Errorf(exportErr.Error())
+		log.Errorf("Export outputs: %s", exportErr)
 	}
 	if runErr != nil || exportErr != nil {
 		return 1
