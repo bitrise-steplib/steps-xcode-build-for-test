@@ -246,7 +246,8 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	}()
 
 	// Build for testing
-	log.Infof("Build:")
+	fmt.Println()
+	log.Infof("Running xcodebuild")
 
 	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
 	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
@@ -285,6 +286,8 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	}
 
 	// Find outputs
+	fmt.Println()
+	log.Infof("Searching for outputs")
 	testBundle, err := b.findTestBundle(findTestBundleOpts{
 		ProjectPath:       cfg.ProjectPath,
 		Scheme:            cfg.Scheme,
@@ -360,6 +363,8 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 }
 
 func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
+	fmt.Println()
+
 	if codesignManager == nil {
 		log.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
 		return nil, nil
