@@ -312,9 +312,11 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	log.Infof("Export:")
 
 	if opts.XcodebuildLog != "" {
-		if err := exportXcodebuildTestLog(opts.OutputDir, opts.XcodebuildLog); err != nil {
-			return err
+		rawXcodebuildOutputLogPath := filepath.Join(opts.OutputDir, "raw-xcodebuild-output.log")
+		if err := output.ExportOutputFileContent(opts.XcodebuildLog, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
+			log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
 		}
+		log.Donef("The xcodebuild command log file path is available in BITRISE_XCODE_RAW_RESULT_TEXT_PATH env: %s", rawXcodebuildOutputLogPath)
 	}
 
 	if opts.BuiltTestDir == "" {
