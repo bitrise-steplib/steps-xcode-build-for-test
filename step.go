@@ -237,6 +237,13 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	if err != nil {
 		return RunOut{}, err
 	}
+	defer func() {
+		if authOptions.KeyPath != "" {
+			if err := os.Remove(authOptions.KeyPath); err != nil {
+				log.Warnf("failed to remove private key file: %s", err)
+			}
+		}
+	}()
 
 	// Build for testing
 	log.Infof("Build:")
@@ -368,12 +375,6 @@ func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*x
 		if err != nil {
 			return nil, err
 		}
-
-		defer func() {
-			if err := os.Remove(privateKey); err != nil {
-				log.Warnf("failed to remove private key file: %s", err)
-			}
-		}()
 
 		return &xcodebuild.AuthenticationParams{
 			KeyID:     xcodebuildAuthParams.KeyID,
