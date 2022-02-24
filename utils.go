@@ -37,7 +37,7 @@ that will attach the file to your build as an artifact!`))
 func exportXcodebuildTestLog(deployDir, xcodebuildTestLog string) error {
 	pth, err := saveRawOutputToLogFile(xcodebuildTestLog)
 	if err != nil {
-		log.Warnf("Failed to save the Raw Output, error: %s", err)
+		log.Warnf("Failed to save the xcodebuild log: %s", err)
 	}
 
 	deployPth := filepath.Join(deployDir, "xcodebuild_test.log")

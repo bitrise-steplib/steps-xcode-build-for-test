@@ -273,7 +273,7 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	// Cache swift packages
 	if cfg.CacheLevel == "swift_packages" {
 		if err := cache.CollectSwiftPackages(cfg.ProjectPath); err != nil {
-			log.Warnf("Failed to mark swift packages for caching, error: %s", err)
+			log.Warnf("Failed to mark swift packages for caching: %s", err)
 		}
 	}
 
