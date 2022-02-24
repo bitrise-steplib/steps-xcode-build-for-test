@@ -239,7 +239,7 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 		return RunOut{}, err
 	}
 	defer func() {
-		if authOptions.KeyPath != "" {
+		if authOptions != nil && authOptions.KeyPath != "" {
 			if err := os.Remove(authOptions.KeyPath); err != nil {
 				log.Warnf("failed to remove private key file: %s", err)
 			}
