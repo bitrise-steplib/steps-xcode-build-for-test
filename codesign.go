@@ -56,10 +56,10 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 
 	codesignConfig, err := codesign.ParseConfig(codesignInputs, cmdFactory)
 	if err != nil {
-		return codesign.Manager{}, fmt.Errorf("issue with input: %s", err)
+		return codesign.Manager{}, fmt.Errorf("issue with input: %w", err)
 	}
 
-	var serviceConnection *devportalservice.AppleDeveloperConnection = nil
+	var serviceConnection *devportalservice.AppleDeveloperConnection
 	devPortalClientFactory := devportalclient.NewFactory(logger)
 	if authType == codesign.APIKeyAuth || authType == codesign.AppleIDAuth {
 		if serviceConnection, err = devPortalClientFactory.CreateBitriseConnection(managerOpts.BuildURL, string(managerOpts.BuildAPIToken)); err != nil {
@@ -90,7 +90,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		ConfigurationName:      managerOpts.Configuration,
 	})
 	if err != nil {
-		return codesign.Manager{}, fmt.Errorf("failed to open project: %s", err)
+		return codesign.Manager{}, fmt.Errorf("failed to open project: %w", err)
 	}
 
 	return codesign.NewManagerWithProject(

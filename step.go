@@ -184,7 +184,6 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	}, nil
 }
 
-// InstallDependencies ...
 func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 	if !useXCPretty {
 		return nil
@@ -417,7 +416,7 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 		return testBundle{}, fmt.Errorf("failed to read build settings: %w", err)
 	}
 
-	// The path at which all products will be placed when performing a build. Typically this path is not set per target, but is set per-project or per-user.
+	// The path at which all products will be placed when performing a build. Typically, this path is not set per target, but is set per-project or per-user.
 	symRoot, err := buildSettings.String("SYMROOT")
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to get SYMROOT build setting: %w", err)
