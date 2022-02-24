@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	xcodebuildLogPath = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+	xcodebuildLogPathEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+	xcodebuildLogBaseName   = "raw-xcodebuild-output.log"
 )
 
 const (
@@ -312,11 +313,11 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	log.Infof("Export:")
 
 	if opts.XcodebuildLog != "" {
-		rawXcodebuildOutputLogPath := filepath.Join(opts.OutputDir, "raw-xcodebuild-output.log")
-		if err := output.ExportOutputFileContent(opts.XcodebuildLog, rawXcodebuildOutputLogPath, xcodebuildLogPath); err != nil {
-			log.Warnf("Failed to export %s, error: %s", xcodebuildLogPath, err)
+		xcodebuildLogPath := filepath.Join(opts.OutputDir, xcodebuildLogBaseName)
+		if err := output.ExportOutputFileContent(opts.XcodebuildLog, xcodebuildLogPath, xcodebuildLogPathEnvKey); err != nil {
+			log.Warnf("Failed to export %s, error: %s", xcodebuildLogPathEnvKey, err)
 		}
-		log.Donef("The xcodebuild command log file path is available in BITRISE_XCODE_RAW_RESULT_TEXT_PATH env: %s", rawXcodebuildOutputLogPath)
+		log.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
 	}
 
 	if opts.BuiltTestDir == "" {
