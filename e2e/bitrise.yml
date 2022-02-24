@@ -110,10 +110,10 @@ workflows:
     after_run:
     - _run
 
-  test_build_output_spaces_custom_build_options:
+  test_build_output_spaces_custom_build_options_automatic_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
-    - SAMPLE_APP_BRANCH: renamed-scheme
+    - SAMPLE_APP_BRANCH: automatic-signing
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
