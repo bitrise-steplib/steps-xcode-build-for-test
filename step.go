@@ -140,7 +140,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	if input.XcodebuildOptions != "" {
 		customOptions, err = shellquote.Split(input.XcodebuildOptions)
 		if err != nil {
-			return Config{}, fmt.Errorf("failed to parse additional options (%s): %w", input.XcodebuildOptions, err)
+			return Config{}, fmt.Errorf("provided additional options (%s) are not valid CLI arguments: %w", input.XcodebuildOptions, err)
 		}
 	}
 
@@ -309,7 +309,8 @@ type ExportOpts struct {
 }
 
 func (b TestBuilder) ExportOutput(opts ExportOpts) error {
-	log.Infof("Export:")
+	fmt.Println()
+	log.Infof("Export outputs")
 
 	if opts.XcodebuildLog != "" {
 		xcodebuildLogPath := filepath.Join(opts.OutputDir, xcodebuildLogBaseName)
@@ -343,7 +344,6 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 		}
 		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
 	}
-	log.Printf("Zipped test bundle: %s", outputTestBundleZipPath)
 	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
 		return fmt.Errorf("failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %w", err)
 	}
