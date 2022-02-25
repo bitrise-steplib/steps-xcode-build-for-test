@@ -70,6 +70,8 @@ github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager
 github.com/bitrise-io/go-xcode/v2/codesign
 github.com/bitrise-io/go-xcode/v2/xcarchive
 github.com/bitrise-io/go-xcode/v2/xcconfig
+github.com/bitrise-io/go-xcode/v2/xcodebuild
+github.com/bitrise-io/go-xcode/v2/xcpretty
 # github.com/bitrise-io/pkcs12 v0.0.0-20211108084543-e52728e011c8
 ## explicit
 github.com/bitrise-io/pkcs12

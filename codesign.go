@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/log"
@@ -16,9 +17,26 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/codesign"
 )
 
-func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
+type CodesignManagerOpts struct {
+	ProjectPath               string
+	Scheme                    string
+	Configuration             string
+	CodeSigningAuthSource     string
+	RegisterTestDevices       bool
+	MinDaysProfileValid       int
+	TeamID                    string
+	CertificateURLList        string
+	CertificatePassphraseList stepconf.Secret
+	KeychainPath              string
+	KeychainPassword          stepconf.Secret
+	BuildURL                  string
+	BuildAPIToken             stepconf.Secret
+	VerboseLog                bool
+}
+
+func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
 	var authType codesign.AuthType
-	switch config.CodeSigningAuthSource {
+	switch managerOpts.CodeSigningAuthSource {
 	case codeSignSourceAppleID:
 		authType = codesign.AppleIDAuth
 	case codeSignSourceAPIKey:
@@ -30,21 +48,21 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 	codesignInputs := codesign.Input{
 		AuthType:                  authType,
 		DistributionMethod:        string(autocodesign.Development),
-		CertificateURLList:        config.CertificateURLList,
-		CertificatePassphraseList: config.CertificatePassphraseList,
-		KeychainPath:              config.KeychainPath,
-		KeychainPassword:          config.KeychainPassword,
+		CertificateURLList:        managerOpts.CertificateURLList,
+		CertificatePassphraseList: managerOpts.CertificatePassphraseList,
+		KeychainPath:              managerOpts.KeychainPath,
+		KeychainPassword:          managerOpts.KeychainPassword,
 	}
 
 	codesignConfig, err := codesign.ParseConfig(codesignInputs, cmdFactory)
 	if err != nil {
-		return codesign.Manager{}, fmt.Errorf("issue with input: %s", err)
+		return codesign.Manager{}, fmt.Errorf("issue with input: %w", err)
 	}
 
-	var serviceConnection *devportalservice.AppleDeveloperConnection = nil
+	var serviceConnection *devportalservice.AppleDeveloperConnection
 	devPortalClientFactory := devportalclient.NewFactory(logger)
 	if authType == codesign.APIKeyAuth || authType == codesign.AppleIDAuth {
-		if serviceConnection, err = devPortalClientFactory.CreateBitriseConnection(config.BuildURL, string(config.BuildAPIToken)); err != nil {
+		if serviceConnection, err = devPortalClientFactory.CreateBitriseConnection(managerOpts.BuildURL, string(managerOpts.BuildAPIToken)); err != nil {
 			return codesign.Manager{}, err
 		}
 	}
@@ -57,22 +75,22 @@ func createCodesignManager(config Config, xcodeMajorVersion int64, logger log.Lo
 	opts := codesign.Opts{
 		AuthType:                   authType,
 		ShouldConsiderXcodeSigning: true,
-		TeamID:                     config.TeamID,
+		TeamID:                     managerOpts.TeamID,
 		ExportMethod:               codesignConfig.DistributionMethod,
 		XcodeMajorVersion:          int(xcodeMajorVersion),
-		RegisterTestDevices:        config.RegisterTestDevices,
+		RegisterTestDevices:        managerOpts.RegisterTestDevices,
 		SignUITests:                true,
-		MinDaysProfileValidity:     config.MinDaysProfileValid,
-		IsVerboseLog:               config.VerboseLog,
+		MinDaysProfileValidity:     managerOpts.MinDaysProfileValid,
+		IsVerboseLog:               managerOpts.VerboseLog,
 	}
 
 	project, err := projectmanager.NewProject(projectmanager.InitParams{
-		ProjectOrWorkspacePath: config.ProjectPath,
-		SchemeName:             config.Scheme,
-		ConfigurationName:      config.Configuration,
+		ProjectOrWorkspacePath: managerOpts.ProjectPath,
+		SchemeName:             managerOpts.Scheme,
+		ConfigurationName:      managerOpts.Configuration,
 	})
 	if err != nil {
-		return codesign.Manager{}, fmt.Errorf("failed to open project: %s", err)
+		return codesign.Manager{}, fmt.Errorf("failed to open project: %w", err)
 	}
 
 	return codesign.NewManagerWithProject(
