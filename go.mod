@@ -13,7 +13,7 @@ require (
 require (
 	github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.1
 	github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.2
-	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.9
+	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.9.0.20220318083141-6f5fa0eedb1e
 )
 
 require (
