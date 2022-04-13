@@ -452,8 +452,10 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 		if err != nil {
 			return testBundle{}, fmt.Errorf("failed to check %s modtime: %w", xctestrunPth, err)
 		}
-
-		if !info.ModTime().Before(opts.BuildInterval.start) && !info.ModTime().After(opts.BuildInterval.end) {
+		buildStartTime := opts.BuildInterval.start
+		buildEndTime := opts.BuildInterval.end
+		if (info.ModTime().After(buildStartTime) && info.ModTime().Before(buildEndTime)) ||
+			info.ModTime().Equal(buildStartTime) || info.ModTime().Equal(buildEndTime) {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
 		}
 	}
