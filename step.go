@@ -454,9 +454,10 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 		}
 		buildStartTime := opts.BuildInterval.start
 		buildEndTime := opts.BuildInterval.end
-		if (info.ModTime().After(buildStartTime) && info.ModTime().Before(buildEndTime)) ||
-			info.ModTime().Equal(buildStartTime) || info.ModTime().Equal(buildEndTime) {
+		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
+		} else {
+			log.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", xctestrunPth, info.ModTime(), buildStartTime, buildEndTime)
 		}
 	}
 
