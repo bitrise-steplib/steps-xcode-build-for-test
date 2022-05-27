@@ -17,6 +17,8 @@ const (
 	LegacyTargetType    TargetType = "PBXLegacyTarget"
 )
 
+const appClipProductType = "com.apple.product-type.application.on-demand-install-capable"
+
 // Target ...
 type Target struct {
 	Type                   TargetType
@@ -29,47 +31,14 @@ type Target struct {
 	buildPhaseIDs          []string
 }
 
-// DependentTargets ...
-func (t Target) DependentTargets() []Target {
-	var targets []Target
+// DependsOn ...
+func (t Target) DependsOn(targetID string) bool {
 	for _, targetDependency := range t.Dependencies {
-		childTarget := targetDependency.Target
-		targets = append(targets, childTarget)
-
-		childDependentTargets := childTarget.DependentTargets()
-		targets = append(targets, childDependentTargets...)
-	}
-
-	return targets
-}
-
-// DependesOn ...
-func (t Target) DependesOn(targetID string) bool {
-	for _, targetDependency := range t.Dependencies {
-		childTarget := targetDependency.Target
-		if childTarget.ID == targetID {
+		if targetDependency.TargetID == targetID {
 			return true
 		}
 	}
 	return false
-}
-
-// DependentExecutableProductTargets ...
-func (t Target) DependentExecutableProductTargets() []Target {
-	var targets []Target
-	for _, targetDependency := range t.Dependencies {
-		childTarget := targetDependency.Target
-		if !childTarget.IsExecutableProduct() {
-			continue
-		}
-
-		targets = append(targets, childTarget)
-
-		childDependentTargets := childTarget.DependentExecutableProductTargets()
-		targets = append(targets, childDependentTargets...)
-	}
-
-	return targets
 }
 
 // IsAppProduct ...
@@ -103,6 +72,11 @@ func (t Target) IsTestProduct() bool {
 // IsUITestProduct ...
 func (t Target) IsUITestProduct() bool {
 	return filepath.Ext(t.ProductType) == ".ui-testing"
+}
+
+// IsAppClipProduct ...
+func (t Target) IsAppClipProduct() bool {
+	return t.ProductType == appClipProductType
 }
 
 func parseTarget(id string, objects serialized.Object) (Target, error) {

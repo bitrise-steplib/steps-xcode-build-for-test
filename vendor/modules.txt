@@ -36,7 +36,7 @@ github.com/bitrise-io/go-utils/v2/env
 github.com/bitrise-io/go-utils/v2/fileutil
 github.com/bitrise-io/go-utils/v2/log
 github.com/bitrise-io/go-utils/v2/pathutil
-# github.com/bitrise-io/go-xcode v1.0.2
+# github.com/bitrise-io/go-xcode v1.0.6
 ## explicit; go 1.15
 github.com/bitrise-io/go-xcode/appleauth
 github.com/bitrise-io/go-xcode/certificateutil
@@ -55,7 +55,7 @@ github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj
 github.com/bitrise-io/go-xcode/xcodeproject/xcscheme
 github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace
 github.com/bitrise-io/go-xcode/xcpretty
-# github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.11
+# github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.15
 ## explicit; go 1.16
 github.com/bitrise-io/go-xcode/v2/autocodesign
 github.com/bitrise-io/go-xcode/v2/autocodesign/certdownloader
@@ -67,6 +67,7 @@ github.com/bitrise-io/go-xcode/v2/autocodesign/devportalclient/spaceship
 github.com/bitrise-io/go-xcode/v2/autocodesign/devportalclient/time
 github.com/bitrise-io/go-xcode/v2/autocodesign/keychain
 github.com/bitrise-io/go-xcode/v2/autocodesign/localcodesignasset
+github.com/bitrise-io/go-xcode/v2/autocodesign/profiledownloader
 github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager
 github.com/bitrise-io/go-xcode/v2/codesign
 github.com/bitrise-io/go-xcode/v2/xcarchive

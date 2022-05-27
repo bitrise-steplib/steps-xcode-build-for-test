@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/go-utils/sliceutil"
+
 	"github.com/bitrise-io/go-steputils/output"
 	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
@@ -50,16 +52,17 @@ type Input struct {
 	// xcodebuild log formatting
 	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
 	// Automatic code signing
-	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
-	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
-	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
-	TeamID                    string          `env:"apple_team_id"`
-	CertificateURLList        string          `env:"certificate_url_list"`
-	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
-	KeychainPath              string          `env:"keychain_path"`
-	KeychainPassword          stepconf.Secret `env:"keychain_password"`
-	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
-	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	CodeSigningAuthSource           string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
+	RegisterTestDevices             bool            `env:"register_test_devices,opt[yes,no]"`
+	MinDaysProfileValid             int             `env:"min_profile_validity,required"`
+	TeamID                          string          `env:"apple_team_id"`
+	CertificateURLList              string          `env:"certificate_url_list"`
+	CertificatePassphraseList       stepconf.Secret `env:"passphrase_list"`
+	KeychainPath                    string          `env:"keychain_path"`
+	KeychainPassword                stepconf.Secret `env:"keychain_password"`
+	FallbackProvisioningProfileURLs string          `env:"fallback_provisioning_profile_url_list"`
+	BuildURL                        string          `env:"BITRISE_BUILD_URL"`
+	BuildAPIToken                   stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
 	// Step output configuration
 	OutputDir string `env:"output_dir,required"`
 	// Caching
@@ -73,7 +76,7 @@ type Config struct {
 	Scheme                 string
 	Configuration          string
 	Destination            string
-	XCConfigContent        string
+	XCConfig               string
 	XcodebuildOptions      []string
 	XCPretty               bool
 	CodesignManager        *codesign.Manager
@@ -136,31 +139,38 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
+	xcconfig := strings.TrimSpace(input.XCConfigContent)
+
 	var customOptions []string
 	if input.XcodebuildOptions != "" {
 		customOptions, err = shellquote.Split(input.XcodebuildOptions)
 		if err != nil {
 			return Config{}, fmt.Errorf("provided additional options (%s) are not valid CLI arguments: %w", input.XcodebuildOptions, err)
 		}
+
+		if sliceutil.IsStringInSlice("-xcconfig", customOptions) && xcconfig != "" {
+			return Config{}, fmt.Errorf("`-xcconfig` option found in 'Additional options for the xcodebuild command' input, please clear 'Build settings (xcconfig)' input as only one can be set")
+		}
 	}
 
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
-			ProjectPath:               absProjectPath,
-			Scheme:                    input.Scheme,
-			Configuration:             input.Configuration,
-			CodeSigningAuthSource:     input.CodeSigningAuthSource,
-			RegisterTestDevices:       input.RegisterTestDevices,
-			MinDaysProfileValid:       input.MinDaysProfileValid,
-			TeamID:                    input.TeamID,
-			CertificateURLList:        input.CertificateURLList,
-			CertificatePassphraseList: input.CertificatePassphraseList,
-			KeychainPath:              input.KeychainPath,
-			KeychainPassword:          input.KeychainPassword,
-			BuildURL:                  input.BuildURL,
-			BuildAPIToken:             input.BuildAPIToken,
-			VerboseLog:                input.VerboseLog,
+			ProjectPath:                     absProjectPath,
+			Scheme:                          input.Scheme,
+			Configuration:                   input.Configuration,
+			CodeSigningAuthSource:           input.CodeSigningAuthSource,
+			RegisterTestDevices:             input.RegisterTestDevices,
+			MinDaysProfileValid:             input.MinDaysProfileValid,
+			TeamID:                          input.TeamID,
+			CertificateURLList:              input.CertificateURLList,
+			CertificatePassphraseList:       input.CertificatePassphraseList,
+			KeychainPath:                    input.KeychainPath,
+			KeychainPassword:                input.KeychainPassword,
+			FallbackProvisioningProfileURLs: input.FallbackProvisioningProfileURLs,
+			BuildURL:                        input.BuildURL,
+			BuildAPIToken:                   input.BuildAPIToken,
+			VerboseLog:                      input.VerboseLog,
 		}, xcodebuildVersion.MajorVersion, logger, factory)
 		if err != nil {
 			return Config{}, err
@@ -173,7 +183,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
-		XCConfigContent:        input.XCConfigContent,
+		XCConfig:               xcconfig,
 		XcodebuildOptions:      customOptions,
 		XCPretty:               input.LogFormatter == "xcpretty",
 		CodesignManager:        codesignManager,
@@ -249,19 +259,22 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	fmt.Println()
 	log.Infof("Running xcodebuild")
 
-	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
-	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
-	if err != nil {
-		return RunOut{}, err
-	}
-
 	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
-	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
+
+	if cfg.XCConfig != "" {
+		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager(), v2pathutil.NewPathChecker())
+		xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfig)
+		if err != nil {
+			return RunOut{}, err
+		}
+		xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
+	}
+
 	if authOptions != nil {
 		xcodeBuildCmd.SetAuthentication(*authOptions)
 	}
