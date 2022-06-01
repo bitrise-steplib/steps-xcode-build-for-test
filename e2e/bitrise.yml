@@ -10,7 +10,6 @@ app:
   - BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
   - BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
   - BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
-  - BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
 
 workflows:
   test_swiftpm:
@@ -178,7 +177,6 @@ workflows:
         - certificate_url_list: $CERTIFICATE_URL_LIST
         - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
         - apple_team_id: $TEAM_ID
-        - fallback_provisioning_profile_url_list: $FALLBACK_PROFILES
     - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
         is_always_run: true
         inputs:
