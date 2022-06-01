@@ -114,7 +114,7 @@ inputs:
     summary: Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
     description: |-
       Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
-      
+
       You can't define `-xcconfig` option in `Additional options for the xcodebuild command` if this input is set.
 
       If empty, no setting is changed. When set it can be either:
