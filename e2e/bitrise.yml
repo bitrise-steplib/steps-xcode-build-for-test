@@ -41,6 +41,8 @@ workflows:
     - BITRISE_SCHEME: sample swiftpm
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
@@ -52,6 +54,8 @@ workflows:
     - BITRISE_SCHEME: sample-apps-fastlane-test
     - BITRISE_CONFIGURATION: Debug
     - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
     - _run_device_tests
@@ -63,6 +67,8 @@ workflows:
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
     - CODE_SIGNING_METHOD: "off"
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     steps:
     - certificate-and-profile-installer: { }
     after_run:
@@ -77,6 +83,8 @@ workflows:
     - BITRISE_CONFIGURATION: Debug
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
@@ -87,6 +95,8 @@ workflows:
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
     - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
@@ -97,6 +107,8 @@ workflows:
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
     - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
@@ -108,6 +120,8 @@ workflows:
     - BITRISE_SCHEME: renamed_scheme
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
@@ -119,32 +133,23 @@ workflows:
     - BITRISE_SCHEME: Scheme with spaces
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     after_run:
     - _run
 
   test_single_certificate_no_passphrase:
-    steps:
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            rm -rf "./_tmp"
-            mkdir -p "./_tmp"
-    - git::https://github.com/bitrise-steplib/bitrise-step-simple-git-clone.git@master:
-        inputs:
-        - repository_url: https://github.com/bitrise-io/sample-apps-ios-simple-objc.git
-        - branch: bundle_id
-        - clone_into_dir: ./_tmp
-    - path::./:
-        title: Step Test
-        inputs:
-        - project_path: ./_tmp/ios-simple-objc/ios-simple-objc.xcodeproj
-        - scheme: ios-simple-objc
-        - automatic_code_signing: api-key
-        - certificate_url_list: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
-        - passphrase_list: ""
-        - apple_team_id: 72SA8V3WYL
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-simple-objc.git
+    - SAMPLE_APP_BRANCH: bundle_id
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: ios-simple-objc
+    - CODE_SIGNING_METHOD: api-key
+    - TEAM_ID: 72SA8V3WYL
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
+    - CERTIFICATE_PASSPHRASE_LIST: ""
+    after_run:
+    - _run
 
   _run:
     steps:
@@ -169,8 +174,8 @@ workflows:
         - output_tool: xcodebuild
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
         - automatic_code_signing: $CODE_SIGNING_METHOD
-        - certificate_url_list: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
-        - passphrase_list: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+        - certificate_url_list: $CERTIFICATE_URL_LIST
+        - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
         - apple_team_id: $TEAM_ID
     - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
         is_always_run: true

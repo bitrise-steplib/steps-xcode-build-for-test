@@ -19,12 +19,7 @@ description: |-
   4. **Device destination specifier**: Destination specifier describes the device to use as a destination. The input value sets xcodebuild's `-destination` option.
 
   Under **xcodebuild configuration**
-  5. **Build settings (xcconfig)**:  Build settings to override the project's build settings. The build settings must be separated by newline character (`\n`). For example:
-      ```
-      COMPILER_INDEX_STORE_ENABLE = NO
-      ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
-      ```
-  The input value sets xcodebuild's `-xcconfig` option.
+  5. **Build settings (xcconfig)**:  Build settings to override the project's build settings. Can be the contents, file path or empty.
   6. **Additional options for the xcodebuild command**:  Additional options to be added to the executed xcodebuild command.
 
   Under **Xcode build log formatting**:
@@ -116,28 +111,38 @@ inputs:
   opts:
     category: xcodebuild configuration
     title: Build settings (xcconfig)
-    summary: Build settings to override the project's build settings.
+    summary: Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
     description: |-
-      Build settings to override the project's build settings.
+      Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
 
-      Build settings must be separated by newline character (`\n`).
+      You can't define `-xcconfig` option in `Additional options for the xcodebuild command` if this input is set.
 
-      Example:
+      If empty, no setting is changed. When set it can be either:
+      1.  Existing `.xcconfig` file path.
 
-      ```
-      COMPILER_INDEX_STORE_ENABLE = NO
-      ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
-      ```
+          Example:
 
-      The input value sets xcodebuild's `-xcconfig` option.
+          `./ios-sample/ios-sample/Configurations/Dev.xcconfig`
 
-- xcodebuild_options: ""
+      2.  The contents of a newly created temporary `.xcconfig` file. (This is the default.)
+
+          Build settings must be separated by newline character (`\n`).
+
+          Example:
+          ```
+          COMPILER_INDEX_STORE_ENABLE = NO
+          ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES
+          ```
+
+- xcodebuild_options:
   opts:
     category: xcodebuild configuration
     title: Additional options for the xcodebuild command
     summary: Additional options to be added to the executed xcodebuild command.
     description: |-
       Additional options to be added to the executed xcodebuild command.
+
+      Prefer using `Build settings (xcconfig)` input for specifying `-xcconfig` option. You can't use both.
 
 # xcodebuild log formatting
 
@@ -266,8 +271,6 @@ inputs:
     category: Step output configuration
     title: Output directory path
     summary: This directory will contain the generated artifacts.
-    description: |-
-      This directory will contain the generated artifacts.
     is_required: true
 
 # Caching
@@ -295,8 +298,6 @@ inputs:
     category: Debugging
     title: Enable verbose logging
     summary: If this input is set, the Step will print additional logs for debugging.
-    description: |-
-      If this input is set, the Step will print additional logs for debugging.
     value_options:
     - "yes"
     - "no"
@@ -318,5 +319,4 @@ outputs:
 - BITRISE_XCODE_RAW_RESULT_TEXT_PATH:
   opts:
     title: "`xcodebuild build-for-testing` command log file path"
-    description: |-
-      The file path of the raw `xcodebuild build-for-testing` command log.
+    summary: The file path of the raw `xcodebuild build-for-testing` command log.

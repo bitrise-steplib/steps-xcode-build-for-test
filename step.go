@@ -13,6 +13,7 @@ import (
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	v2command "github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
 	v2fileutil "github.com/bitrise-io/go-utils/v2/fileutil"
@@ -73,7 +74,7 @@ type Config struct {
 	Scheme                 string
 	Configuration          string
 	Destination            string
-	XCConfigContent        string
+	XCConfig               string
 	XcodebuildOptions      []string
 	XCPretty               bool
 	CodesignManager        *codesign.Manager
@@ -84,10 +85,13 @@ type Config struct {
 }
 
 type TestBuilder struct {
+	logger v2log.Logger
 }
 
-func NewTestBuilder() TestBuilder {
-	return TestBuilder{}
+func NewTestBuilder(logger v2log.Logger) TestBuilder {
+	return TestBuilder{
+		logger: logger,
+	}
 }
 
 func (b TestBuilder) ProcessConfig() (Config, error) {
@@ -96,12 +100,11 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	if err := parser.Parse(&input); err != nil {
 		return Config{}, err
 	}
-	logger := v2log.NewLogger()
-	logger.EnableDebugLog(input.VerboseLog)
+	b.logger.EnableDebugLog(input.VerboseLog)
 	log.SetEnableDebugLog(input.VerboseLog)
 
 	stepconf.Print(input)
-	fmt.Println()
+	b.logger.Println()
 
 	absProjectPath, err := filepath.Abs(input.ProjectPath)
 	if err != nil {
@@ -126,7 +129,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
 	}
-	log.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+	b.logger.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 
 	var swiftPackagesPath string
 	if xcodebuildVersion.MajorVersion >= 11 {
@@ -136,11 +139,19 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
+	if strings.TrimSpace(input.XCConfigContent) == "" {
+		input.XCConfigContent = ""
+	}
+
 	var customOptions []string
 	if input.XcodebuildOptions != "" {
 		customOptions, err = shellquote.Split(input.XcodebuildOptions)
 		if err != nil {
 			return Config{}, fmt.Errorf("provided additional options (%s) are not valid CLI arguments: %w", input.XcodebuildOptions, err)
+		}
+
+		if sliceutil.IsStringInSlice("-xcconfig", customOptions) && input.XCConfigContent != "" {
+			return Config{}, fmt.Errorf("`-xcconfig` option found in 'Additional options for the xcodebuild command' input, please clear 'Build settings (xcconfig)' input as only one can be set")
 		}
 	}
 
@@ -161,7 +172,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 			BuildURL:                  input.BuildURL,
 			BuildAPIToken:             input.BuildAPIToken,
 			VerboseLog:                input.VerboseLog,
-		}, xcodebuildVersion.MajorVersion, logger, factory)
+		}, xcodebuildVersion.MajorVersion, b.logger, factory)
 		if err != nil {
 			return Config{}, err
 		}
@@ -173,7 +184,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
-		XCConfigContent:        input.XCConfigContent,
+		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,
 		XCPretty:               input.LogFormatter == "xcpretty",
 		CodesignManager:        codesignManager,
@@ -189,9 +200,9 @@ func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 		return nil
 	}
 
-	fmt.Println()
-	log.Infof("Checking if output tool (xcpretty) is installed")
-	formatter := xcpretty.NewXcpretty()
+	b.logger.Println()
+	b.logger.Infof("Checking if output tool (xcpretty) is installed")
+	formatter := xcpretty.NewXcpretty(b.logger)
 
 	installed, err := formatter.IsInstalled()
 	if err != nil {
@@ -199,9 +210,9 @@ func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 	}
 
 	if !installed {
-		log.Warnf("xcpretty is not installed")
-		fmt.Println()
-		log.Printf("Installing xcpretty")
+		b.logger.Warnf("xcpretty is not installed")
+		b.logger.Println()
+		b.logger.Printf("Installing xcpretty")
 
 		cmdModelSlice, err := formatter.Install()
 		if err != nil {
@@ -220,7 +231,7 @@ func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
 		return fmt.Errorf("failed to get xcpretty version: %w", err)
 	}
 
-	log.Printf("- xcpretty version: %s", xcprettyVersion.String())
+	b.logger.Printf("- xcpretty version: %s", xcprettyVersion.String())
 	return nil
 }
 
@@ -240,20 +251,14 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	defer func() {
 		if authOptions != nil && authOptions.KeyPath != "" {
 			if err := os.Remove(authOptions.KeyPath); err != nil {
-				log.Warnf("failed to remove private key file: %s", err)
+				b.logger.Warnf("failed to remove private key file: %s", err)
 			}
 		}
 	}()
 
 	// Build for testing
-	fmt.Println()
-	log.Infof("Running xcodebuild")
-
-	xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager())
-	xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfigContent)
-	if err != nil {
-		return RunOut{}, err
-	}
+	b.logger.Println()
+	b.logger.Infof("Running xcodebuild")
 
 	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
@@ -261,7 +266,16 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
 	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
-	xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
+
+	if cfg.XCConfig != "" {
+		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
+		xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfig)
+		if err != nil {
+			return RunOut{}, err
+		}
+		xcodeBuildCmd.SetXCConfigPath(xcconfigPath)
+	}
+
 	if authOptions != nil {
 		xcodeBuildCmd.SetAuthentication(*authOptions)
 	}
@@ -281,13 +295,13 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	// Cache swift packages
 	if cfg.CacheLevel == "swift_packages" {
 		if err := cache.CollectSwiftPackages(cfg.ProjectPath); err != nil {
-			log.Warnf("Failed to mark swift packages for caching: %s", err)
+			b.logger.Warnf("Failed to mark swift packages for caching: %s", err)
 		}
 	}
 
 	// Find outputs
-	fmt.Println()
-	log.Infof("Searching for outputs")
+	b.logger.Println()
+	b.logger.Infof("Searching for outputs")
 	testBundle, err := b.findTestBundle(findTestBundleOpts{
 		ProjectPath:       cfg.ProjectPath,
 		Scheme:            cfg.Scheme,
@@ -312,15 +326,15 @@ type ExportOpts struct {
 }
 
 func (b TestBuilder) ExportOutput(opts ExportOpts) error {
-	fmt.Println()
-	log.Infof("Export outputs")
+	b.logger.Println()
+	b.logger.Infof("Export outputs")
 
 	if opts.XcodebuildLog != "" {
 		xcodebuildLogPath := filepath.Join(opts.OutputDir, xcodebuildLogBaseName)
 		if err := output.ExportOutputFileContent(opts.XcodebuildLog, xcodebuildLogPath, xcodebuildLogPathEnvKey); err != nil {
-			log.Warnf("Failed to export %s, error: %s", xcodebuildLogPathEnvKey, err)
+			b.logger.Warnf("Failed to export %s, error: %s", xcodebuildLogPathEnvKey, err)
 		}
-		log.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
+		b.logger.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
 	}
 
 	if opts.BuiltTestDir == "" {
@@ -332,7 +346,7 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	if err := output.ExportOutputDir(opts.BuiltTestDir, outputTestDirPath, "BITRISE_TEST_DIR_PATH"); err != nil {
 		return fmt.Errorf("failed to export BITRISE_TEST_DIR_PATH: %w", err)
 	}
-	log.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
+	b.logger.Donef("The built test directory is available in BITRISE_TEST_DIR_PATH env: %s", outputTestDirPath)
 
 	// Zipped test bundle
 	outputTestBundleZipPath := filepath.Join(opts.OutputDir, "testbundle.zip")
@@ -350,27 +364,27 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	if err := tools.ExportEnvironmentWithEnvman("BITRISE_TEST_BUNDLE_ZIP_PATH", outputTestBundleZipPath); err != nil {
 		return fmt.Errorf("failed to export BITRISE_TEST_BUNDLE_ZIP_PATH: %w", err)
 	}
-	log.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
+	b.logger.Donef("The zipped test bundle is available in BITRISE_TEST_BUNDLE_ZIP_PATH env: %s", outputTestBundleZipPath)
 
 	// xctestrun
 	outputXCTestrunPth := filepath.Join(opts.OutputDir, filepath.Base(opts.XctestrunPth))
 	if err := output.ExportOutputFile(opts.XctestrunPth, outputXCTestrunPth, "BITRISE_XCTESTRUN_FILE_PATH"); err != nil {
 		return fmt.Errorf("failed to export BITRISE_XCTESTRUN_FILE_PATH: %w", err)
 	}
-	log.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
+	b.logger.Donef("The built xctestrun file is available in BITRISE_XCTESTRUN_FILE_PATH env: %s", outputXCTestrunPth)
 
 	return nil
 }
 
 func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
-	fmt.Println()
+	b.logger.Println()
 
 	if codesignManager == nil {
-		log.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
+		b.logger.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
 		return nil, nil
 	}
 
-	log.Infof("Preparing code signing assets (certificates, profiles)")
+	b.logger.Infof("Preparing code signing assets (certificates, profiles)")
 
 	xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
 	if err != nil {
@@ -413,8 +427,8 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 	buildSettingsCmd.SetConfiguration(opts.Configuration)
 	buildSettingsCmd.SetCustomOptions(append([]string{"build-for-testing"}, opts.XcodebuildOptions...))
 
-	fmt.Println()
-	log.Donef("$ %s", buildSettingsCmd.PrintableCmd())
+	b.logger.Println()
+	b.logger.Donef("$ %s", buildSettingsCmd.PrintableCmd())
 
 	buildSettings, err := buildSettingsCmd.RunAndReturnSettings()
 	if err != nil {
@@ -426,13 +440,13 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to get SYMROOT build setting: %w", err)
 	}
-	log.Printf("SYMROOT: %s", symRoot)
+	b.logger.Printf("SYMROOT: %s", symRoot)
 
 	configuration, err := buildSettings.String("CONFIGURATION")
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to get CONFIGURATION build setting: %w", err)
 	}
-	log.Printf("CONFIGURATION: %s", configuration)
+	b.logger.Printf("CONFIGURATION: %s", configuration)
 
 	// Without better solution the step collects every xctestrun files and filters them for the build time frame
 	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", opts.Scheme))
@@ -440,7 +454,7 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
 	}
-	log.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
+	b.logger.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
 
 	if len(xctestrunPths) == 0 {
 		return testBundle{}, fmt.Errorf("no xctestrun file found with pattern: %s", xctestrunPthPattern)
@@ -457,7 +471,7 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
 		} else {
-			log.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", xctestrunPth, info.ModTime(), buildStartTime, buildEndTime)
+			b.logger.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", xctestrunPth, info.ModTime(), buildStartTime, buildEndTime)
 		}
 	}
 
@@ -468,7 +482,7 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 	}
 
 	xctestrunPth := buildXCTestrunPths[0]
-	log.Printf("Built xctestrun path: %s", xctestrunPth)
+	b.logger.Printf("Built xctestrun path: %s", xctestrunPth)
 
 	// Without better solution the step determines the build target based on the xctestrun file name
 	// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
@@ -485,7 +499,7 @@ func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error)
 	} else if !exist {
 		return testBundle{}, fmt.Errorf("built test directory does not exist at: %s", builtTestDir)
 	}
-	log.Printf("Built test directory: %s", builtTestDir)
+	b.logger.Printf("Built test directory: %s", builtTestDir)
 
 	return testBundle{
 		BuiltTestDir: builtTestDir,

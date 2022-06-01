@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bitrise-io/go-utils/log"
+	v2log "github.com/bitrise-io/go-utils/v2/log"
 )
 
 func main() {
@@ -11,16 +11,18 @@ func main() {
 }
 
 func run() int {
-	s := createStep()
+	logger := v2log.NewLogger()
+
+	s := createStep(logger)
 	cfg, err := s.ProcessConfig()
 	if err != nil {
-		log.Errorf("Process config: %s", err)
+		logger.Errorf("Process config: %s", err)
 		return 1
 	}
 
 	if err := s.InstallDependencies(cfg.XCPretty); err != nil {
-		log.Warnf("Install dependencies: %s", err)
-		log.Printf("Switching to xcodebuild for output tool")
+		logger.Warnf("Install dependencies: %s", err)
+		logger.Printf("Switching to xcodebuild for output tool")
 		cfg.XCPretty = false
 	}
 
@@ -31,10 +33,10 @@ func run() int {
 	})
 
 	if runErr != nil {
-		log.Errorf("Run: %s", runErr)
+		logger.Errorf("Run: %s", runErr)
 	}
 	if exportErr != nil {
-		log.Errorf("Export outputs: %s", exportErr)
+		logger.Errorf("Export outputs: %s", exportErr)
 	}
 	if runErr != nil || exportErr != nil {
 		return 1
@@ -43,6 +45,6 @@ func run() int {
 	return 0
 }
 
-func createStep() TestBuilder {
-	return NewTestBuilder()
+func createStep(logger v2log.Logger) TestBuilder {
+	return NewTestBuilder(logger)
 }

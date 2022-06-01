@@ -13,6 +13,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/codesignasset"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/devportalclient"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/localcodesignasset"
+	"github.com/bitrise-io/go-xcode/v2/autocodesign/profiledownloader"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
 )
@@ -46,12 +47,13 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	}
 
 	codesignInputs := codesign.Input{
-		AuthType:                  authType,
-		DistributionMethod:        string(autocodesign.Development),
-		CertificateURLList:        managerOpts.CertificateURLList,
-		CertificatePassphraseList: managerOpts.CertificatePassphraseList,
-		KeychainPath:              managerOpts.KeychainPath,
-		KeychainPassword:          managerOpts.KeychainPassword,
+		AuthType:                     authType,
+		DistributionMethod:           string(autocodesign.Development),
+		CertificateURLList:           managerOpts.CertificateURLList,
+		CertificatePassphraseList:    managerOpts.CertificatePassphraseList,
+		KeychainPath:                 managerOpts.KeychainPath,
+		KeychainPassword:             managerOpts.KeychainPassword,
+		FallbackProvisioningProfiles: "",
 	}
 
 	codesignConfig, err := codesign.ParseConfig(codesignInputs, cmdFactory)
@@ -90,15 +92,17 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		ConfigurationName:      managerOpts.Configuration,
 	})
 	if err != nil {
-		return codesign.Manager{}, fmt.Errorf("failed to open project: %w", err)
+		return codesign.Manager{}, err
 	}
 
+	client := retry.NewHTTPClient().StandardClient()
 	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
 		serviceConnection,
 		devPortalClientFactory,
-		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, retry.NewHTTPClient().StandardClient()),
+		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, client),
+		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, client),
 		codesignasset.NewWriter(codesignConfig.Keychain),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		project,
