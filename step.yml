@@ -111,9 +111,9 @@ inputs:
   opts:
     category: xcodebuild configuration
     title: Build settings (xcconfig)
-    summary: Build settings to override the project's build settings. Can be the contents, file path or empty.
+    summary: Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
     description: |-
-      Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.
+      Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option. Can be the contents, file path or empty.
 
       If empty, no setting is changed. This is required when the `-xcconfig` additional option is used.
 
@@ -268,6 +268,7 @@ inputs:
   opts:
     category: Automatic code signing
     title: Fallback provisioning profile URLs
+    summary: If set, provided provisioning profiles will be used on Automatic code signing error.
     description: |
       If set, provided provisioning profiles will be used on Automatic code signing error.
 
@@ -287,8 +288,6 @@ inputs:
     category: Step output configuration
     title: Output directory path
     summary: This directory will contain the generated artifacts.
-    description: |-
-      This directory will contain the generated artifacts.
     is_required: true
 
 # Caching
@@ -316,8 +315,6 @@ inputs:
     category: Debugging
     title: Enable verbose logging
     summary: If this input is set, the Step will print additional logs for debugging.
-    description: |-
-      If this input is set, the Step will print additional logs for debugging.
     value_options:
     - "yes"
     - "no"
@@ -339,5 +336,4 @@ outputs:
 - BITRISE_XCODE_RAW_RESULT_TEXT_PATH:
   opts:
     title: "`xcodebuild build-for-testing` command log file path"
-    description: |-
-      The file path of the raw `xcodebuild build-for-testing` command log.
+    summary: The file path of the raw `xcodebuild build-for-testing` command log.
