@@ -139,7 +139,9 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
-	xcconfig := strings.TrimSpace(input.XCConfigContent)
+	if strings.TrimSpace(input.XCConfigContent) == "" {
+		input.XCConfigContent = ""
+	}
 
 	var customOptions []string
 	if input.XcodebuildOptions != "" {
@@ -148,7 +150,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 			return Config{}, fmt.Errorf("provided additional options (%s) are not valid CLI arguments: %w", input.XcodebuildOptions, err)
 		}
 
-		if sliceutil.IsStringInSlice("-xcconfig", customOptions) && xcconfig != "" {
+		if sliceutil.IsStringInSlice("-xcconfig", customOptions) && input.XCConfigContent != "" {
 			return Config{}, fmt.Errorf("`-xcconfig` option found in 'Additional options for the xcodebuild command' input, please clear 'Build settings (xcconfig)' input as only one can be set")
 		}
 	}
@@ -182,7 +184,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
-		XCConfig:               xcconfig,
+		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,
 		XCPretty:               input.LogFormatter == "xcpretty",
 		CodesignManager:        codesignManager,
