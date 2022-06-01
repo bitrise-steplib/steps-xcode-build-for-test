@@ -51,17 +51,16 @@ type Input struct {
 	// xcodebuild log formatting
 	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
 	// Automatic code signing
-	CodeSigningAuthSource           string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
-	RegisterTestDevices             bool            `env:"register_test_devices,opt[yes,no]"`
-	MinDaysProfileValid             int             `env:"min_profile_validity,required"`
-	TeamID                          string          `env:"apple_team_id"`
-	CertificateURLList              string          `env:"certificate_url_list"`
-	CertificatePassphraseList       stepconf.Secret `env:"passphrase_list"`
-	KeychainPath                    string          `env:"keychain_path"`
-	KeychainPassword                stepconf.Secret `env:"keychain_password"`
-	FallbackProvisioningProfileURLs string          `env:"fallback_provisioning_profile_url_list"`
-	BuildURL                        string          `env:"BITRISE_BUILD_URL"`
-	BuildAPIToken                   stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
+	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
+	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
+	TeamID                    string          `env:"apple_team_id"`
+	CertificateURLList        string          `env:"certificate_url_list"`
+	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
+	KeychainPath              string          `env:"keychain_path"`
+	KeychainPassword          stepconf.Secret `env:"keychain_password"`
+	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
+	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
 	// Step output configuration
 	OutputDir string `env:"output_dir,required"`
 	// Caching
@@ -157,21 +156,20 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
-			ProjectPath:                     absProjectPath,
-			Scheme:                          input.Scheme,
-			Configuration:                   input.Configuration,
-			CodeSigningAuthSource:           input.CodeSigningAuthSource,
-			RegisterTestDevices:             input.RegisterTestDevices,
-			MinDaysProfileValid:             input.MinDaysProfileValid,
-			TeamID:                          input.TeamID,
-			CertificateURLList:              input.CertificateURLList,
-			CertificatePassphraseList:       input.CertificatePassphraseList,
-			KeychainPath:                    input.KeychainPath,
-			KeychainPassword:                input.KeychainPassword,
-			FallbackProvisioningProfileURLs: input.FallbackProvisioningProfileURLs,
-			BuildURL:                        input.BuildURL,
-			BuildAPIToken:                   input.BuildAPIToken,
-			VerboseLog:                      input.VerboseLog,
+			ProjectPath:               absProjectPath,
+			Scheme:                    input.Scheme,
+			Configuration:             input.Configuration,
+			CodeSigningAuthSource:     input.CodeSigningAuthSource,
+			RegisterTestDevices:       input.RegisterTestDevices,
+			MinDaysProfileValid:       input.MinDaysProfileValid,
+			TeamID:                    input.TeamID,
+			CertificateURLList:        input.CertificateURLList,
+			CertificatePassphraseList: input.CertificatePassphraseList,
+			KeychainPath:              input.KeychainPath,
+			KeychainPassword:          input.KeychainPassword,
+			BuildURL:                  input.BuildURL,
+			BuildAPIToken:             input.BuildAPIToken,
+			VerboseLog:                input.VerboseLog,
 		}, xcodebuildVersion.MajorVersion, b.logger, factory)
 		if err != nil {
 			return Config{}, err

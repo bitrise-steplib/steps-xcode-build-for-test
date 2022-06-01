@@ -19,21 +19,20 @@ import (
 )
 
 type CodesignManagerOpts struct {
-	ProjectPath                     string
-	Scheme                          string
-	Configuration                   string
-	CodeSigningAuthSource           string
-	RegisterTestDevices             bool
-	MinDaysProfileValid             int
-	TeamID                          string
-	CertificateURLList              string
-	CertificatePassphraseList       stepconf.Secret
-	KeychainPath                    string
-	KeychainPassword                stepconf.Secret
-	FallbackProvisioningProfileURLs string
-	BuildURL                        string
-	BuildAPIToken                   stepconf.Secret
-	VerboseLog                      bool
+	ProjectPath               string
+	Scheme                    string
+	Configuration             string
+	CodeSigningAuthSource     string
+	RegisterTestDevices       bool
+	MinDaysProfileValid       int
+	TeamID                    string
+	CertificateURLList        string
+	CertificatePassphraseList stepconf.Secret
+	KeychainPath              string
+	KeychainPassword          stepconf.Secret
+	BuildURL                  string
+	BuildAPIToken             stepconf.Secret
+	VerboseLog                bool
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
@@ -54,7 +53,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		CertificatePassphraseList:    managerOpts.CertificatePassphraseList,
 		KeychainPath:                 managerOpts.KeychainPath,
 		KeychainPassword:             managerOpts.KeychainPassword,
-		FallbackProvisioningProfiles: managerOpts.FallbackProvisioningProfileURLs,
+		FallbackProvisioningProfiles: "",
 	}
 
 	codesignConfig, err := codesign.ParseConfig(codesignInputs, cmdFactory)
