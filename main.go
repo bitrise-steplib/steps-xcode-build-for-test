@@ -3,7 +3,8 @@ package main
 import (
 	"os"
 
-	v2log "github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
 )
 
 func main() {
@@ -11,40 +12,42 @@ func main() {
 }
 
 func run() int {
-	logger := v2log.NewLogger()
+	exitCode := 0
 
-	s := createStep(logger)
-	cfg, err := s.ProcessConfig()
+	logger := log.NewLogger()
+	xcodebuildBuild := createXcodebuildBuild(logger)
+
+	cfg, err := xcodebuildBuild.ProcessConfig()
 	if err != nil {
 		logger.Errorf("Process config: %s", err)
-		return 1
+
+		exitCode = 1
+		return exitCode
 	}
 
-	if err := s.InstallDependencies(cfg.XCPretty); err != nil {
+	if err := xcodebuildBuild.InstallDependencies(cfg.XCPretty); err != nil {
 		logger.Warnf("Install dependencies: %s", err)
 		logger.Printf("Switching to xcodebuild for output tool")
 		cfg.XCPretty = false
 	}
 
-	runOut, runErr := s.Run(cfg)
-	exportErr := s.ExportOutput(ExportOpts{
+	result, err := xcodebuildBuild.Run(cfg)
+	if err != nil {
+		logger.Errorf("Run: %s", err)
+		exitCode = 1
+	}
+
+	if err := xcodebuildBuild.ExportOutputs(step.ExportOpts{
 		OutputDir: cfg.OutputDir,
-		RunOut:    runOut,
-	})
-
-	if runErr != nil {
-		logger.Errorf("Run: %s", runErr)
-	}
-	if exportErr != nil {
-		logger.Errorf("Export outputs: %s", exportErr)
-	}
-	if runErr != nil || exportErr != nil {
-		return 1
+		RunOut:    result,
+	}); err != nil {
+		logger.Errorf("Export outputs: %s", err)
+		exitCode = 1
 	}
 
-	return 0
+	return exitCode
 }
 
-func createStep(logger v2log.Logger) TestBuilder {
-	return NewTestBuilder(logger)
+func createXcodebuildBuild(logger log.Logger) step.XcodebuildBuild {
+	return step.NewXcodebuildBuild(logger)
 }

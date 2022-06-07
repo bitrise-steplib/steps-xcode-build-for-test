@@ -1,4 +1,4 @@
-package main
+package step
 
 import (
 	"errors"
@@ -84,17 +84,17 @@ type Config struct {
 	SwiftPackagesPath      string
 }
 
-type TestBuilder struct {
+type XcodebuildBuild struct {
 	logger v2log.Logger
 }
 
-func NewTestBuilder(logger v2log.Logger) TestBuilder {
-	return TestBuilder{
+func NewXcodebuildBuild(logger v2log.Logger) XcodebuildBuild {
+	return XcodebuildBuild{
 		logger: logger,
 	}
 }
 
-func (b TestBuilder) ProcessConfig() (Config, error) {
+func (b XcodebuildBuild) ProcessConfig() (Config, error) {
 	var input Input
 	parser := stepconf.NewInputParser(env.NewRepository())
 	if err := parser.Parse(&input); err != nil {
@@ -195,7 +195,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	}, nil
 }
 
-func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
+func (b XcodebuildBuild) InstallDependencies(useXCPretty bool) error {
 	if !useXCPretty {
 		return nil
 	}
@@ -242,7 +242,7 @@ type RunOut struct {
 	SYMRoot       string
 }
 
-func (b TestBuilder) Run(cfg Config) (RunOut, error) {
+func (b XcodebuildBuild) Run(cfg Config) (RunOut, error) {
 	// Automatic code signing
 	authOptions, err := b.automaticCodeSigning(cfg.CodesignManager)
 	if err != nil {
@@ -325,7 +325,7 @@ type ExportOpts struct {
 	OutputDir string
 }
 
-func (b TestBuilder) ExportOutput(opts ExportOpts) error {
+func (b XcodebuildBuild) ExportOutputs(opts ExportOpts) error {
 	b.logger.Println()
 	b.logger.Infof("Export outputs")
 
@@ -376,8 +376,7 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	return nil
 }
 
-func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
-	b.logger.Println()
+func (b XcodebuildBuild) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
 
 	if codesignManager == nil {
 		b.logger.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
@@ -421,7 +420,7 @@ type testBundle struct {
 	SYMRoot      string
 }
 
-func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
+func (b XcodebuildBuild) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
 	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(opts.ProjectPath)
 	buildSettingsCmd.SetScheme(opts.Scheme)
 	buildSettingsCmd.SetConfiguration(opts.Configuration)
