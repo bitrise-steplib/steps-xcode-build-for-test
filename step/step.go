@@ -14,9 +14,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/sliceutil"
-	v2command "github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
-	v2fileutil "github.com/bitrise-io/go-utils/v2/fileutil"
+	"github.com/bitrise-io/go-utils/v2/fileutil"
 	v2log "github.com/bitrise-io/go-utils/v2/log"
 	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
@@ -124,7 +124,7 @@ func (b XcodebuildBuild) ProcessConfig() (Config, error) {
 		}
 	}
 
-	factory := v2command.NewFactory(env.NewRepository())
+	factory := command.NewFactory(env.NewRepository())
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
@@ -268,7 +268,7 @@ func (b XcodebuildBuild) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
 
 	if cfg.XCConfig != "" {
-		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
+		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
 		xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfig)
 		if err != nil {
 			return RunOut{}, err
@@ -350,8 +350,8 @@ func (b XcodebuildBuild) ExportOutputs(opts ExportOpts) error {
 
 	// Zipped test bundle
 	outputTestBundleZipPath := filepath.Join(opts.OutputDir, "testbundle.zip")
-	factory := v2command.NewFactory(env.NewRepository())
-	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(opts.BuiltTestDir), filepath.Base(opts.XctestrunPth)}, &v2command.Opts{
+	factory := command.NewFactory(env.NewRepository())
+	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(opts.BuiltTestDir), filepath.Base(opts.XctestrunPth)}, &command.Opts{
 		Dir: opts.SYMRoot,
 	})
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
@@ -377,6 +377,7 @@ func (b XcodebuildBuild) ExportOutputs(opts ExportOpts) error {
 }
 
 func (b XcodebuildBuild) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
+	b.logger.Println()
 
 	if codesignManager == nil {
 		b.logger.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
