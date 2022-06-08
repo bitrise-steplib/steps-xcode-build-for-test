@@ -1,7 +1,6 @@
 package xcodebuild
 
 import (
-	"github.com/bitrise-io/go-utils/v2/log"
 	xcodebuildCmdFactory "github.com/bitrise-io/go-xcode/xcodebuild"
 	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 )
@@ -11,7 +10,6 @@ type Xcodebuild interface {
 }
 
 type xcodebuild struct {
-	logger log.Logger
 }
 
 func NewXcodebuild() Xcodebuild {
@@ -23,9 +21,6 @@ func (b xcodebuild) ShowBuildSettings(projectPath, scheme, configuration, action
 	buildSettingsCmd.SetScheme(scheme)
 	buildSettingsCmd.SetConfiguration(configuration)
 	buildSettingsCmd.SetCustomOptions(append([]string{action}, options...))
-
-	b.logger.Println()
-	b.logger.Donef("$ %s", buildSettingsCmd.PrintableCmd())
 
 	return buildSettingsCmd.RunAndReturnSettings()
 }

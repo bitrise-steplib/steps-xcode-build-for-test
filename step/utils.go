@@ -34,7 +34,7 @@ func (c modtimeChecker) ModifiedInTimeFrame(pth string, start, end time.Time) (b
 		return true, nil
 	}
 
-	c.logger.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", pth, info.ModTime(), start, end)
+	c.logger.Warnf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", pth, info.ModTime(), start, end)
 	return false, nil
 }
 

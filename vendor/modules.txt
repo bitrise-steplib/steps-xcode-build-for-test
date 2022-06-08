@@ -111,15 +111,16 @@ github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/objx v0.4.0
 ## explicit; go 1.12
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.7.1
+# github.com/stretchr/testify v1.7.2
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
+github.com/stretchr/testify/require
 # golang.org/x/text v0.3.7
 ## explicit; go 1.17
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# gopkg.in/yaml.v3 v3.0.0
+# gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
 # howett.net/plist v1.0.0

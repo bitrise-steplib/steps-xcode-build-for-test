@@ -54,6 +54,7 @@ func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
 	xcbuild := xcodebuild.NewXcodebuild()
 	modtimeChecker := step.NewModtimeChecker(logger)
 	pathChecker := pathutil.NewPathChecker()
+	filepathGlobber := step.NewFilepathGlober()
 
-	return step.NewXcodebuildBuilder(logger, xcbuild, modtimeChecker, pathChecker)
+	return step.NewXcodebuildBuilder(logger, xcbuild, modtimeChecker, pathChecker, filepathGlobber)
 }

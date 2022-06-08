@@ -90,13 +90,16 @@ type XcodebuildBuilder struct {
 	xcodebuild     xcodebuild2.Xcodebuild
 	modtimeChecker ModtimeChecker
 	pathChecker    v2pathutil.PathChecker
+	filepathGlober FilepathGlober
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild, modtimeChecker ModtimeChecker, pathChecker v2pathutil.PathChecker) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild, modtimeChecker ModtimeChecker, pathChecker v2pathutil.PathChecker, filepathGlober FilepathGlober) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		logger:         logger,
 		xcodebuild:     xcodebuild,
 		modtimeChecker: modtimeChecker,
+		pathChecker:    pathChecker,
+		filepathGlober: filepathGlober,
 	}
 }
 
@@ -447,8 +450,8 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 	b.logger.Printf("CONFIGURATION: %s", configuration)
 
 	// Without better solution the step collects every xctestrun files and filters them for the build time frame
-	xctestrunPthPattern := filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", opts.Scheme))
-	xctestrunPths, err := filepath.Glob(xctestrunPthPattern)
+	xctestrunPthPattern := xctestrunPathPattern(symRoot, opts.Scheme)
+	xctestrunPths, err := b.filepathGlober.Glob(xctestrunPthPattern)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
 	}
@@ -476,16 +479,7 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 	xctestrunPth := buildXCTestrunPths[0]
 	b.logger.Printf("Built xctestrun path: %s", xctestrunPth)
 
-	// Without better solution the step determines the build target based on the xctestrun file name
-	// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
-	var builtForDestination string
-	if strings.Contains(xctestrunPth, fmt.Sprintf("%s_iphonesimulator", opts.Scheme)) {
-		builtForDestination = "iphonesimulator"
-	} else {
-		builtForDestination = "iphoneos"
-	}
-
-	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
+	builtTestDir := builtTestDirPath(xctestrunPth, symRoot, opts.Scheme, opts.Configuration)
 	if exist, err := b.pathChecker.IsPathExists(builtTestDir); err != nil {
 		return testBundle{}, fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
 	} else if !exist {
@@ -498,4 +492,21 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		XctestrunPth: xctestrunPth,
 		SYMRoot:      symRoot,
 	}, nil
+}
+
+func xctestrunPathPattern(symRoot, scheme string) string {
+	return filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", scheme))
+}
+
+// Without better solution the step determines the build target based on the xctestrun file name
+// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
+func builtTestDirPath(xctestrunPth, symRoot, scheme, configuration string) string {
+	var builtForDestination string
+	if strings.Contains(xctestrunPth, fmt.Sprintf("%s_iphonesimulator", scheme)) {
+		builtForDestination = "iphonesimulator"
+	} else {
+		builtForDestination = "iphoneos"
+	}
+
+	return filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
 }
