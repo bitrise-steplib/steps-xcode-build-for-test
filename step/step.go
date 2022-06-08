@@ -100,8 +100,8 @@ func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild
 		modtimeChecker: modtimeChecker,
 		pathChecker:    pathChecker,
 		filepathGlober: filepathGlober,
+	}
 }
-
 
 func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	var input Input
