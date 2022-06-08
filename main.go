@@ -15,9 +15,9 @@ func run() int {
 	exitCode := 0
 
 	logger := log.NewLogger()
-	xcodebuildBuild := createXcodebuildBuild(logger)
+	xcodebuildBuilder := createXcodebuildBuilder(logger)
 
-	cfg, err := xcodebuildBuild.ProcessConfig()
+	cfg, err := xcodebuildBuilder.ProcessConfig()
 	if err != nil {
 		logger.Errorf("Process config: %s", err)
 
@@ -25,19 +25,19 @@ func run() int {
 		return exitCode
 	}
 
-	if err := xcodebuildBuild.InstallDependencies(cfg.XCPretty); err != nil {
+	if err := xcodebuildBuilder.InstallDependencies(cfg.XCPretty); err != nil {
 		logger.Warnf("Install dependencies: %s", err)
 		logger.Printf("Switching to xcodebuild for output tool")
 		cfg.XCPretty = false
 	}
 
-	result, err := xcodebuildBuild.Run(cfg)
+	result, err := xcodebuildBuilder.Run(cfg)
 	if err != nil {
 		logger.Errorf("Run: %s", err)
 		exitCode = 1
 	}
 
-	if err := xcodebuildBuild.ExportOutputs(step.ExportOpts{
+	if err := xcodebuildBuilder.ExportOutputs(step.ExportOpts{
 		OutputDir: cfg.OutputDir,
 		RunOut:    result,
 	}); err != nil {
@@ -48,6 +48,6 @@ func run() int {
 	return exitCode
 }
 
-func createXcodebuildBuild(logger log.Logger) step.XcodebuildBuild {
-	return step.NewXcodebuildBuild(logger)
+func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
+	return step.NewXcodebuildBuilder(logger)
 }
