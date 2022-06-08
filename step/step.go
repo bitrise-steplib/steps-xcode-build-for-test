@@ -26,6 +26,7 @@ import (
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
+	xcodebuild2 "github.com/bitrise-steplib/steps-xcode-build-for-test/xcodebuild"
 	"github.com/kballard/go-shellquote"
 )
 
@@ -85,12 +86,17 @@ type Config struct {
 }
 
 type XcodebuildBuilder struct {
-	logger v2log.Logger
+	logger         v2log.Logger
+	xcodebuild     xcodebuild2.Xcodebuild
+	modtimeChecker ModtimeChecker
+	pathChecker    v2pathutil.PathChecker
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild, modtimeChecker ModtimeChecker, pathChecker v2pathutil.PathChecker) XcodebuildBuilder {
 	return XcodebuildBuilder{
-		logger: logger,
+		logger:         logger,
+		xcodebuild:     xcodebuild,
+		modtimeChecker: modtimeChecker,
 	}
 }
 
@@ -283,7 +289,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	result := RunOut{}
 	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.XCPretty, cfg.SwiftPackagesPath)
 	if err != nil || !cfg.XCPretty {
-		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil)
+		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil, b.logger)
 	}
 
 	result.XcodebuildLog = rawXcodebuildOut
@@ -422,15 +428,7 @@ type testBundle struct {
 }
 
 func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
-	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(opts.ProjectPath)
-	buildSettingsCmd.SetScheme(opts.Scheme)
-	buildSettingsCmd.SetConfiguration(opts.Configuration)
-	buildSettingsCmd.SetCustomOptions(append([]string{"build-for-testing"}, opts.XcodebuildOptions...))
-
-	b.logger.Println()
-	b.logger.Donef("$ %s", buildSettingsCmd.PrintableCmd())
-
-	buildSettings, err := buildSettingsCmd.RunAndReturnSettings()
+	buildSettings, err := b.xcodebuild.ShowBuildSettings(opts.ProjectPath, opts.Scheme, opts.Configuration, "build-for-testing", opts.XcodebuildOptions)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to read build settings: %w", err)
 	}
@@ -462,16 +460,10 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 
 	var buildXCTestrunPths []string
 	for _, xctestrunPth := range xctestrunPths {
-		info, err := os.Stat(xctestrunPth)
-		if err != nil {
-			return testBundle{}, fmt.Errorf("failed to check %s modtime: %w", xctestrunPth, err)
-		}
-		buildStartTime := opts.BuildInterval.start
-		buildEndTime := opts.BuildInterval.end
-		if !info.ModTime().Before(buildStartTime) && !info.ModTime().After(buildEndTime) {
+		if modified, err := b.modtimeChecker.ModifiedInTimeFrame(xctestrunPth, opts.BuildInterval.start, opts.BuildInterval.end); err != nil {
+			return testBundle{}, err
+		} else if modified {
 			buildXCTestrunPths = append(buildXCTestrunPths, xctestrunPth)
-		} else {
-			b.logger.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", xctestrunPth, info.ModTime(), buildStartTime, buildEndTime)
 		}
 	}
 
@@ -494,7 +486,7 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 	}
 
 	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
-	if exist, err := pathutil.IsPathExists(builtTestDir); err != nil {
+	if exist, err := b.pathChecker.IsPathExists(builtTestDir); err != nil {
 		return testBundle{}, fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
 	} else if !exist {
 		return testBundle{}, fmt.Errorf("built test directory does not exist at: %s", builtTestDir)

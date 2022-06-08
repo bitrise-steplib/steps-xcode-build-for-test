@@ -2,29 +2,74 @@ package step
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/bitrise-io/go-utils/colorstring"
-	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-utils/v2/log"
 )
 
-func printLastLinesOfXcodebuildTestLog(rawXcodebuildOutput string, isRunSuccess bool) {
+type ModtimeChecker interface {
+	ModifiedInTimeFrame(pth string, start, end time.Time) (bool, error)
+}
+
+type modtimeChecker struct {
+	logger log.Logger
+}
+
+func NewModtimeChecker(logger log.Logger) ModtimeChecker {
+	return modtimeChecker{
+		logger: logger,
+	}
+}
+
+func (c modtimeChecker) ModifiedInTimeFrame(pth string, start, end time.Time) (bool, error) {
+	info, err := os.Stat(pth)
+	if err != nil {
+		return false, fmt.Errorf("failed to check %s modtime: %w", pth, err)
+	}
+	if !info.ModTime().Before(start) && !info.ModTime().After(end) {
+		return true, nil
+	}
+
+	c.logger.Printf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", pth, info.ModTime(), start, end)
+	return false, nil
+}
+
+type FilepathGlober interface {
+	Glob(pattern string) (matches []string, err error)
+}
+
+type filepathGlober struct {
+}
+
+func NewFilepathGlober() FilepathGlober {
+	return filepathGlober{}
+}
+
+func (g filepathGlober) Glob(pattern string) (matches []string, err error) {
+	return filepath.Glob(pattern)
+}
+
+func printLastLinesOfXcodebuildTestLog(rawXcodebuildOutput string, isRunSuccess bool, logger log.Logger) {
 	const lastLines = "\nLast lines of the build log:"
 	if !isRunSuccess {
-		log.Errorf(lastLines)
+		logger.Errorf(lastLines)
 	} else {
-		log.Infof(lastLines)
+		logger.Infof(lastLines)
 	}
 
-	fmt.Println(stringutil.LastNLines(rawXcodebuildOutput, 20))
+	logger.Printf(stringutil.LastNLines(rawXcodebuildOutput, 20) + "\n")
 
 	if !isRunSuccess {
-		log.Warnf("If you can't find the reason of the error in the log, please check the %s.", xcodebuildLogBaseName)
+		logger.Warnf("If you can't find the reason of the error in the log, please check the %s.", xcodebuildLogBaseName)
 	}
 
-	fmt.Println(colorstring.Magentaf(`
+	logger.Printf(colorstring.Magentaf(`
 The log file is stored in the output directory, and its full path
 is available in the $%s environment variable.
 Use Deploy to Bitrise.io step (after this step),
-to attach the file to your build as an artifact!`, xcodebuildLogPathEnvKey))
+to attach the file to your build as an artifact!`, xcodebuildLogPathEnvKey) + "\n")
 }
