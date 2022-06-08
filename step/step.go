@@ -498,11 +498,15 @@ func xctestrunPathPattern(symRoot, scheme string) string {
 	return filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", scheme))
 }
 
-// Without better solution the step determines the build target based on the xctestrun file name
-// ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
 func builtTestDirPath(xctestrunPth, symRoot, scheme, configuration string) string {
+	// Without better solution the step determines the build target based on the xctestrun file name.
+	// xctestrun file name layout (without Test Plans): <scheme>_<destination>.xctestrun
+	// 	example: ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
+	//
+	// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
+	//	example: BullsEye_FullTests_iphonesimulator15.5-arm64-x86_64.xctestrun
 	var builtForDestination string
-	if strings.Contains(xctestrunPth, fmt.Sprintf("%s_iphonesimulator", scheme)) {
+	if strings.Contains(xctestrunPth, "_iphonesimulator") {
 		builtForDestination = "iphonesimulator"
 	} else {
 		builtForDestination = "iphoneos"

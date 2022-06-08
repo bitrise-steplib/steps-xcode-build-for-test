@@ -11,6 +11,7 @@ import (
 )
 
 func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t *testing.T) {
+	// Given
 	step, stepMocks := createStepAndMocks()
 
 	project := "BullsEye.xcworkspace"
@@ -37,6 +38,7 @@ func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t
 
 	stepMocks.logger.On("Printf", mock.Anything, mock.Anything).Return()
 
+	// When
 	bundle, err := step.findTestBundle(findTestBundleOpts{
 		ProjectPath:       project,
 		Scheme:            scheme,
@@ -45,6 +47,7 @@ func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t
 		BuildInterval:     timeInterval{},
 	})
 
+	// Then
 	require.NoError(t, err)
 	require.Equal(t, builtTestDir, filepath.Join(symroot, "Debug-iphonesimulator"))
 	require.Equal(t, xctestrunPth, xctestrunPth)
