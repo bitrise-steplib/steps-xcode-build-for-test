@@ -1,4 +1,4 @@
-package main
+package step
 
 import (
 	"errors"
@@ -14,9 +14,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/sliceutil"
-	v2command "github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
-	v2fileutil "github.com/bitrise-io/go-utils/v2/fileutil"
+	"github.com/bitrise-io/go-utils/v2/fileutil"
 	v2log "github.com/bitrise-io/go-utils/v2/log"
 	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
@@ -84,17 +84,17 @@ type Config struct {
 	SwiftPackagesPath      string
 }
 
-type TestBuilder struct {
+type XcodebuildBuilder struct {
 	logger v2log.Logger
 }
 
-func NewTestBuilder(logger v2log.Logger) TestBuilder {
-	return TestBuilder{
+func NewXcodebuildBuilder(logger v2log.Logger) XcodebuildBuilder {
+	return XcodebuildBuilder{
 		logger: logger,
 	}
 }
 
-func (b TestBuilder) ProcessConfig() (Config, error) {
+func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	var input Input
 	parser := stepconf.NewInputParser(env.NewRepository())
 	if err := parser.Parse(&input); err != nil {
@@ -124,7 +124,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
-	factory := v2command.NewFactory(env.NewRepository())
+	factory := command.NewFactory(env.NewRepository())
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
@@ -195,7 +195,7 @@ func (b TestBuilder) ProcessConfig() (Config, error) {
 	}, nil
 }
 
-func (b TestBuilder) InstallDependencies(useXCPretty bool) error {
+func (b XcodebuildBuilder) InstallDependencies(useXCPretty bool) error {
 	if !useXCPretty {
 		return nil
 	}
@@ -242,7 +242,7 @@ type RunOut struct {
 	SYMRoot       string
 }
 
-func (b TestBuilder) Run(cfg Config) (RunOut, error) {
+func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	// Automatic code signing
 	authOptions, err := b.automaticCodeSigning(cfg.CodesignManager)
 	if err != nil {
@@ -268,7 +268,7 @@ func (b TestBuilder) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
 
 	if cfg.XCConfig != "" {
-		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), v2fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
+		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
 		xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfig)
 		if err != nil {
 			return RunOut{}, err
@@ -325,7 +325,7 @@ type ExportOpts struct {
 	OutputDir string
 }
 
-func (b TestBuilder) ExportOutput(opts ExportOpts) error {
+func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 	b.logger.Println()
 	b.logger.Infof("Export outputs")
 
@@ -350,8 +350,8 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 
 	// Zipped test bundle
 	outputTestBundleZipPath := filepath.Join(opts.OutputDir, "testbundle.zip")
-	factory := v2command.NewFactory(env.NewRepository())
-	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(opts.BuiltTestDir), filepath.Base(opts.XctestrunPth)}, &v2command.Opts{
+	factory := command.NewFactory(env.NewRepository())
+	zipCmd := factory.Create("zip", []string{"-r", outputTestBundleZipPath, filepath.Base(opts.BuiltTestDir), filepath.Base(opts.XctestrunPth)}, &command.Opts{
 		Dir: opts.SYMRoot,
 	})
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
@@ -376,7 +376,7 @@ func (b TestBuilder) ExportOutput(opts ExportOpts) error {
 	return nil
 }
 
-func (b TestBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
+func (b XcodebuildBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
 	b.logger.Println()
 
 	if codesignManager == nil {
@@ -421,7 +421,7 @@ type testBundle struct {
 	SYMRoot      string
 }
 
-func (b TestBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
+func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
 	buildSettingsCmd := xcodebuild.NewShowBuildSettingsCommand(opts.ProjectPath)
 	buildSettingsCmd.SetScheme(opts.Scheme)
 	buildSettingsCmd.SetConfiguration(opts.Configuration)
