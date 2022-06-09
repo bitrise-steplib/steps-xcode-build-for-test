@@ -33,10 +33,13 @@ func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t
 
 	stepMocks.modtimeChecker.On("ModifiedInTimeFrame", xctestrunPth, mock.Anything, mock.Anything).Return(true, nil)
 
-	builtTestDir := builtTestDirPath(xctestrunPth, symroot, scheme, configuration)
-	stepMocks.pathChecker.On("IsPathExists", builtTestDir).Return(true, nil)
+	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
+
+	builtTestDir, err := step.builtTestDirPath([]string{xctestrunPth}, symroot, configuration)
+	require.NoError(t, err)
 
 	stepMocks.logger.On("Printf", mock.Anything, mock.Anything).Return()
+	stepMocks.logger.On("Donef", mock.Anything, mock.Anything).Return()
 
 	// When
 	bundle, err := step.findTestBundle(findTestBundleOpts{

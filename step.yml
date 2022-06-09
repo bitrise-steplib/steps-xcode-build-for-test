@@ -315,19 +315,30 @@ inputs:
     is_required: true
 
 outputs:
+- BITRISE_TEST_BUNDLE_PATH:
+  opts:
+    title: Test Bundle directory
+    summary: Directory of the built targets' binaries and built associated tests.
+
+- BITRISE_TEST_BUNDLE_ZIP_PATH:
+  opts:
+    title: Zipped Test Bundle directory
+    summary: Zipped directory of the built targets' binaries and built associated tests.
+
+# TODO: is it used or is it a useful output?
 - BITRISE_TEST_DIR_PATH:
   opts:
     title: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
     summary: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
+
 - BITRISE_XCTESTRUN_FILE_PATH:
   opts:
-    title: "Path to the built xctestrun file (example: `PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`)"
-    summary: "Path to the built xctestrun file (example: `PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`)"
-- BITRISE_TEST_BUNDLE_ZIP_PATH:
-  opts:
-    title: The built test directory and the built xctestrun file compressed as a single zip
-    summary: The built test directory and the built xctestrun file compressed as a single zip
+    title: xctestrun file path
+    summary: File path of the built xctestrun file.
+    description: |-
+      File path of the built xctestrun file (example: `$SYMROOT/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`)".
+
 - BITRISE_XCODE_RAW_RESULT_TEXT_PATH:
   opts:
     title: "`xcodebuild build-for-testing` command log file path"
-    summary: The file path of the raw `xcodebuild build-for-testing` command log.
+    summary: File path of the raw `xcodebuild build-for-testing` command log.
