@@ -105,6 +105,17 @@ inputs:
       The input value sets xcodebuild's `-destination` option.
     is_required: true
 
+- test_plan:
+  opts:
+    title: Test Plan
+    summary: Build tests for a specific Test Plan associated with the Scheme.
+    description: |-
+      Build tests for a specific Test Plan associated with the Scheme.
+
+      Leave this input empty to build all the Test Plans or Test Targets associated with the Scheme.
+
+      The input value sets xcodebuild's `-testPlan` option.
+
 # xcodebuild configuration
 
 - xcconfig_content: COMPILER_INDEX_STORE_ENABLE = NO

@@ -46,6 +46,7 @@ type Input struct {
 	Scheme        string `env:"scheme,required"`
 	Configuration string `env:"configuration"`
 	Destination   string `env:"destination,required"`
+	TestPlan      string `env:"test_plan"`
 	// xcodebuild configuration
 	XCConfigContent   string `env:"xcconfig_content"`
 	XcodebuildOptions string `env:"xcodebuild_options"`
@@ -75,6 +76,7 @@ type Config struct {
 	Scheme                 string
 	Configuration          string
 	Destination            string
+	TestPlan               string
 	XCConfig               string
 	XcodebuildOptions      []string
 	XCPretty               bool
@@ -193,6 +195,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
+		TestPlan:               input.TestPlan,
 		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,
 		XCPretty:               input.LogFormatter == "xcpretty",
@@ -274,7 +277,17 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
 	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
-	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
+
+	var options []string
+	// TODO: add setter method for specifying Test Plan on xcodeBuildCmd
+	if cfg.TestPlan != "" {
+		options = append(options, "-testPlan", cfg.TestPlan)
+	}
+	if len(cfg.XcodebuildOptions) > 0 {
+		options = append(options, cfg.XcodebuildOptions...)
+	}
+
+	xcodeBuildCmd.SetCustomOptions(options)
 
 	if cfg.XCConfig != "" {
 		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
@@ -291,6 +304,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 
 	result := RunOut{}
 	rawXcodebuildOut, buildInterval, err := runCommandWithRetry(xcodeBuildCmd, cfg.XCPretty, cfg.SwiftPackagesPath)
+	// TODO: if output_tool == xcodebuild, the build log is printed to stdout + last couple of lines printed again
 	if err != nil || !cfg.XCPretty {
 		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil, b.logger)
 	}
