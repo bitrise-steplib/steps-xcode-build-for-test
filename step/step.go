@@ -385,7 +385,7 @@ func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) 
 }
 
 func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xctestrunPths []string) error {
-	// BITRISE_TEST_DIR_PATH
+	// BITRISE_TEST_BUNDLE_PATH
 	tmpDir, err := v2pathutil.NewPathProvider().CreateTempDir("test_bundle")
 	if err != nil {
 		return err
