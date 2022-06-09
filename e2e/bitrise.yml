@@ -183,31 +183,13 @@ workflows:
         - envs:
         - files:
         - dirs: |-
+            BITRISE_TEST_BUNDLE_PATH
             BITRISE_TEST_DIR_PATH
+            BITRISE_XCTESTRUN_FILE_PATH
         - deploy_dir: $BITRISE_DEPLOY_DIR
         - deployed_files: |-
             BITRISE_TEST_BUNDLE_ZIP_PATH
-            BITRISE_XCTESTRUN_FILE_PATH
         - deployed_dirs:
-    - script:
-        title: Output check
-        is_always_run: true
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ "$BITRISE_DEPLOY_DIR/testbundle.zip" != "$BITRISE_TEST_BUNDLE_ZIP_PATH" ]] ; then
-              echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
-              exit 1
-            fi
-            if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then
-              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
-              exit 1
-            fi
-            if [[ "$BITRISE_XCTESTRUN_FILE_PATH" =~ "$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos[0-9]{2}.[0-9]{1,2}-arm64e.xctestrun" ]] ; then
-              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos{{sdk-version}}-arm64e.xctestrun\""
-              exit 1
-            fi
 
   _run_device_tests:
     steps:
