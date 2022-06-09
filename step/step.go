@@ -427,7 +427,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 		}
 		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
 	}
-	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, xctestrunPathEnvKey); err != nil {
+	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
