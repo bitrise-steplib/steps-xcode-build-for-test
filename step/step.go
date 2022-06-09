@@ -1,8 +1,10 @@
 package step
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -410,7 +412,22 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 
 	// BITRISE_TEST_BUNDLE_ZIP_PATH
 	testBundleZipPth := filepath.Join(outputDir, "testbundle.zip")
-	if err := output.ZipAndExportOutput([]string{tmpDir}, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
+	factory := v2command.NewFactory(env.NewRepository())
+	args := []string{"-r", testBundleZipPth, filepath.Base(copiedTestDirDestination)}
+	for _, xctestrunPth := range copiedXctestrunPths {
+		args = append(args, filepath.Base(xctestrunPth))
+	}
+	zipCmd := factory.Create("zip", args, &v2command.Opts{
+		Dir: tmpDir,
+	})
+	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
+		var exerr *exec.ExitError
+		if errors.As(err, &exerr) {
+			return fmt.Errorf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
+		}
+		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
+	}
+	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, xctestrunPathEnvKey); err != nil {
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
@@ -551,6 +568,7 @@ func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, scheme string, build
 
 func (b XcodebuildBuilder) builtTestDirPath(xctestrunPths []string, symRoot, configuration string) (string, error) {
 	// Without better solution the step determines the build target based on the xctestrun file name.
+	//
 	// xctestrun file name layout (without Test Plans): <scheme>_<destination>.xctestrun
 	// 	example: ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
 	//
