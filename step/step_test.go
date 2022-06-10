@@ -35,7 +35,7 @@ func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t
 
 	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
 
-	builtTestDir, err := step.builtTestDirPath([]string{xctestrunPth}, symroot, configuration)
+	builtTestDir, err := step.findBuiltTestDirPath([]string{xctestrunPth}, symroot, configuration)
 	require.NoError(t, err)
 
 	stepMocks.logger.On("Printf", mock.Anything, mock.Anything).Return()
@@ -53,7 +53,7 @@ func Test_GivenIosProjectWithTestPlan_WhenFindTestBundle_ThenReturnsTestBundle(t
 	// Then
 	require.NoError(t, err)
 	require.Equal(t, builtTestDir, filepath.Join(symroot, "Debug-iphonesimulator"))
-	require.Equal(t, xctestrunPth, xctestrunPth)
+	require.Equal(t, xctestrunPth, filepath.Join(symroot, "BullsEye_FullTests_iphonesimulator15.5-arm64-x86_64.xctestrun"))
 	require.Equal(t, symroot, bundle.SYMRoot)
 }
 

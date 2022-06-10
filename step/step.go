@@ -352,7 +352,7 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 
 	if opts.XcodebuildLog != "" {
 		if err := b.exportXcodebuildLog(opts.OutputDir, opts.XcodebuildLog); err != nil {
-			log.Warnf("%s", err)
+			b.logger.Warnf("%s", err)
 		}
 	}
 
@@ -361,10 +361,207 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 	}
 
 	if err := b.exportTestBundle(opts.OutputDir, opts.BuiltTestDir, opts.XctestrunPths, opts.DefaultXctestrunPth); err != nil {
-		log.Warnf("%s", err)
+		b.logger.Warnf("%s", err)
 	}
 
 	return nil
+}
+
+func (b XcodebuildBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
+	b.logger.Println()
+
+	if codesignManager == nil {
+		b.logger.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
+		return nil, nil
+	}
+
+	b.logger.Infof("Preparing code signing assets (certificates, profiles)")
+
+	xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare code signing assets: %w", err)
+	}
+
+	if xcodebuildAuthParams != nil {
+		privateKey, err := xcodebuildAuthParams.WritePrivateKeyToFile()
+		if err != nil {
+			return nil, err
+		}
+
+		return &xcodebuild.AuthenticationParams{
+			KeyID:     xcodebuildAuthParams.KeyID,
+			IsssuerID: xcodebuildAuthParams.IssuerID,
+			KeyPath:   privateKey,
+		}, nil
+	}
+
+	return nil, nil
+}
+
+type findTestBundleOpts struct {
+	ProjectPath       string
+	Scheme            string
+	Configuration     string
+	XcodebuildOptions []string
+	BuildInterval     timeInterval
+}
+
+type testBundle struct {
+	BuiltTestDir        string
+	XctestrunPths       []string
+	DefaultXctestrunPth string
+	SYMRoot             string
+}
+
+// findTestBundle searches for the built target, associated tests and xctestrun file(s) in the build root (SYMROOT).
+// Example file structure of the build root:
+// ├── BullsEye_EventuallyFailingInMemoryTests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_EventuallyFailingTests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_EventuallySucceedingTests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_FailingTests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_ParallelUITests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_UITests_iphonesimulator15.5-arm64.xctestrun
+// ├── BullsEye_UnitTests_iphonesimulator15.5-arm64.xctestrun
+// └── Debug-iphonesimulator
+//     ├── BullsEye.app
+//     ├── BullsEye.swiftmodule
+//     ├── BullsEyeFailingTests.swiftmodule
+//     ├── BullsEyeSlowTests.swiftmodule
+//     ├── BullsEyeTests.swiftmodule
+//     ├── BullsEyeUITests-Runner.app
+//     └── BullsEyeUITests.swiftmodule
+func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
+	buildSettings, err := b.xcodebuild.ShowBuildSettings(opts.ProjectPath, opts.Scheme, opts.Configuration, "build-for-testing", opts.XcodebuildOptions)
+	if err != nil {
+		return testBundle{}, fmt.Errorf("failed to read build settings: %w", err)
+	}
+
+	symRoot, err := buildSettings.String("SYMROOT")
+	if err != nil {
+		return testBundle{}, fmt.Errorf("failed to get SYMROOT build setting: %w", err)
+	}
+	b.logger.Printf("SYMROOT: %s", symRoot)
+
+	configuration, err := buildSettings.String("CONFIGURATION")
+	if err != nil {
+		return testBundle{}, fmt.Errorf("failed to get CONFIGURATION build setting: %w", err)
+	}
+	b.logger.Printf("CONFIGURATION: %s", configuration)
+
+	xctestrunPths, defaultXCTestrunPth, err := b.findBuiltXCTestrunFiles(symRoot, opts.ProjectPath, opts.Scheme, opts.BuildInterval.start, opts.BuildInterval.end)
+	if err != nil {
+		return testBundle{}, fmt.Errorf("failed to find built xctestrun file(s): %w", err)
+	}
+
+	if len(xctestrunPths) == 0 {
+		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
+	}
+
+	builtTestDir, err := b.findBuiltTestDirPath(xctestrunPths, symRoot, opts.Configuration)
+	if err != nil {
+		return testBundle{}, fmt.Errorf("failed to find built test directory: %w", err)
+	}
+
+	b.logger.Donef("Built test directory: %s", builtTestDir)
+
+	return testBundle{
+		BuiltTestDir:        builtTestDir,
+		XctestrunPths:       xctestrunPths,
+		DefaultXctestrunPth: defaultXCTestrunPth,
+		SYMRoot:             symRoot,
+	}, nil
+}
+
+func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, projectPath, schemeName string, buildStart, buildEnd time.Time) ([]string, string, error) {
+	xctestrunPthPattern := xctestrunPathPattern(symRoot, schemeName)
+	xctestrunPths, err := b.filepathGlober.Glob(xctestrunPthPattern)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
+	}
+
+	// Since we do not know which xctestrun files generated during this build
+	// the step collects all of them and filters for the build time frame.
+	var builtXctestrunPths []string
+	for _, xctestrunPth := range xctestrunPths {
+		if modified, err := b.modtimeChecker.ModifiedInTimeFrame(xctestrunPth, buildStart, buildEnd); err != nil {
+			return nil, "", err
+		} else if modified {
+			builtXctestrunPths = append(builtXctestrunPths, xctestrunPth)
+		}
+	}
+
+	if len(builtXctestrunPths) == 0 {
+		return nil, "", nil
+	}
+
+	b.logger.Donef("xctestrun file(s) generated during the build:\n- %s", strings.Join(builtXctestrunPths, "\n- "))
+
+	// find default xctestrun file
+	var defaultXctestrunPth string
+	if len(builtXctestrunPths) > 1 {
+		scheme, _, err := schemeint.Scheme(projectPath, schemeName)
+		if err != nil {
+			return nil, "", err
+		}
+
+		var defaultTestPlanName string
+		if testPlan := scheme.DefaultTestPlan(); testPlan != nil {
+			defaultTestPlanName = testPlan.Name()
+		}
+
+		if defaultTestPlanName != "" {
+			for _, xctestrunPth := range builtXctestrunPths {
+				// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
+				if strings.Contains(filepath.Base(xctestrunPth), fmt.Sprintf("_%s_", defaultTestPlanName)) {
+					b.logger.Donef("default xctestrun based on %s scheme's default test plan (%s): %s", schemeName, defaultTestPlanName, xctestrunPth)
+					defaultXctestrunPth = xctestrunPth
+				}
+			}
+		}
+	}
+	if defaultXctestrunPth == "" {
+		defaultXctestrunPth = builtXctestrunPths[0]
+	}
+
+	return builtXctestrunPths, defaultXctestrunPth, nil
+}
+
+// findBuiltTestDirPath searches for the directory storing built target and associated tests based on the xctestrun file name.
+func (b XcodebuildBuilder) findBuiltTestDirPath(xctestrunPths []string, symRoot, configuration string) (string, error) {
+	var builtForDestination string
+	for _, xctestrunPth := range xctestrunPths {
+		// xctestrun file name layout (without Test Plans): <scheme>_<destination>.xctestrun
+		// 	example: ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
+		//
+		// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
+		//	example: BullsEye_FullTests_iphonesimulator15.5-arm64-x86_64.xctestrun
+		var destination string
+		if strings.Contains(xctestrunPth, "_iphonesimulator") {
+			destination = "iphonesimulator"
+		} else {
+			destination = "iphoneos"
+		}
+
+		if builtForDestination == "" {
+			builtForDestination = destination
+		} else if builtForDestination != destination {
+			return "", fmt.Errorf("xctestrun files with different destinations")
+		}
+	}
+
+	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
+	if exist, err := b.pathChecker.IsPathExists(builtTestDir); err != nil {
+		return "", fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
+	} else if !exist {
+		return "", fmt.Errorf("built test directory does not exist at: %s", builtTestDir)
+	}
+
+	return builtTestDir, nil
+}
+
+func xctestrunPathPattern(symRoot, scheme string) string {
+	return filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", scheme))
 }
 
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
@@ -435,9 +632,8 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 	b.logger.Donef("The built target directory is available in %s env: %s", builtTargetBinariesDirEnvKey, copiedTestDirDestination)
 
 	// BITRISE_XCTESTRUN_FILE_PATH
-
 	if len(copiedXctestrunPths) > 0 {
-		log.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", copiedDefaultXctestrunPth)
+		b.logger.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", copiedDefaultXctestrunPth)
 	}
 	if err := output.ExportOutputFile(copiedDefaultXctestrunPth, copiedDefaultXctestrunPth, xctestrunPathEnvKey); err != nil {
 		return err
@@ -445,179 +641,4 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 	b.logger.Donef("The built xctestrun file is available in %s env: %s", xctestrunPathEnvKey, copiedDefaultXctestrunPth)
 
 	return nil
-}
-
-func (b XcodebuildBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {
-	b.logger.Println()
-
-	if codesignManager == nil {
-		b.logger.Infof("Automatic code signing is disabled, skipped downloading code sign assets")
-		return nil, nil
-	}
-
-	b.logger.Infof("Preparing code signing assets (certificates, profiles)")
-
-	xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare code signing assets: %w", err)
-	}
-
-	if xcodebuildAuthParams != nil {
-		privateKey, err := xcodebuildAuthParams.WritePrivateKeyToFile()
-		if err != nil {
-			return nil, err
-		}
-
-		return &xcodebuild.AuthenticationParams{
-			KeyID:     xcodebuildAuthParams.KeyID,
-			IsssuerID: xcodebuildAuthParams.IssuerID,
-			KeyPath:   privateKey,
-		}, nil
-	}
-
-	return nil, nil
-}
-
-type findTestBundleOpts struct {
-	ProjectPath       string
-	Scheme            string
-	Configuration     string
-	XcodebuildOptions []string
-	BuildInterval     timeInterval
-}
-
-type testBundle struct {
-	BuiltTestDir        string
-	XctestrunPths       []string
-	DefaultXctestrunPth string
-	SYMRoot             string
-}
-
-func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
-	buildSettings, err := b.xcodebuild.ShowBuildSettings(opts.ProjectPath, opts.Scheme, opts.Configuration, "build-for-testing", opts.XcodebuildOptions)
-	if err != nil {
-		return testBundle{}, fmt.Errorf("failed to read build settings: %w", err)
-	}
-
-	// The path at which all products will be placed when performing a build. Typically, this path is not set per target, but is set per-project or per-user.
-	symRoot, err := buildSettings.String("SYMROOT")
-	if err != nil {
-		return testBundle{}, fmt.Errorf("failed to get SYMROOT build setting: %w", err)
-	}
-	b.logger.Printf("SYMROOT: %s", symRoot)
-
-	configuration, err := buildSettings.String("CONFIGURATION")
-	if err != nil {
-		return testBundle{}, fmt.Errorf("failed to get CONFIGURATION build setting: %w", err)
-	}
-	b.logger.Printf("CONFIGURATION: %s", configuration)
-
-	// Without better solution the step collects every xctestrun files and filters them for the build time frame
-	xctestrunPths, err := b.findBuiltXCTestrunFiles(symRoot, opts.Scheme, opts.BuildInterval.start, opts.BuildInterval.end)
-	if err != nil {
-		return testBundle{}, fmt.Errorf("failed to find built xctestrun file(s): %w", err)
-	}
-
-	if len(xctestrunPths) == 0 {
-		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
-	}
-
-	b.logger.Donef("xctestrun file(s) generated during the build:\n- %s", strings.Join(xctestrunPths, "\n- "))
-
-	var defaultXCTestrunPth string
-	if len(xctestrunPths) > 1 {
-		scheme, _, err := schemeint.Scheme(opts.ProjectPath, opts.Scheme)
-		if err != nil {
-			return testBundle{}, err
-		}
-
-		var defaultTestPlanName string
-		if testPlan := scheme.DefaultTestPlan(); testPlan != nil {
-			defaultTestPlanName = testPlan.Name()
-		}
-
-		if defaultTestPlanName != "" {
-			for _, xctestrunPth := range xctestrunPths {
-				// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
-				if strings.Contains(filepath.Base(xctestrunPth), fmt.Sprintf("_%s_", defaultTestPlanName)) {
-					b.logger.Donef("default xctestrun based on %s scheme's default test plan (%s): %s", opts.Scheme, defaultTestPlanName, xctestrunPth)
-					defaultXCTestrunPth = xctestrunPth
-				}
-			}
-		}
-	}
-	if defaultXCTestrunPth == "" {
-		defaultXCTestrunPth = xctestrunPths[0]
-	}
-
-	builtTestDir, err := b.builtTestDirPath(xctestrunPths, symRoot, opts.Configuration)
-	if err != nil {
-		return testBundle{}, fmt.Errorf("failed to find built test directory: %w", err)
-	}
-
-	b.logger.Donef("Built test directory: %s", builtTestDir)
-
-	return testBundle{
-		BuiltTestDir:        builtTestDir,
-		XctestrunPths:       xctestrunPths,
-		DefaultXctestrunPth: defaultXCTestrunPth,
-		SYMRoot:             symRoot,
-	}, nil
-}
-
-func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, scheme string, buildStart, buildEnd time.Time) ([]string, error) {
-	xctestrunPthPattern := xctestrunPathPattern(symRoot, scheme)
-	xctestrunPths, err := b.filepathGlober.Glob(xctestrunPthPattern)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
-	}
-
-	var builtXCTestrunPths []string
-	for _, xctestrunPth := range xctestrunPths {
-		if modified, err := b.modtimeChecker.ModifiedInTimeFrame(xctestrunPth, buildStart, buildEnd); err != nil {
-			return nil, err
-		} else if modified {
-			builtXCTestrunPths = append(builtXCTestrunPths, xctestrunPth)
-		}
-	}
-
-	return builtXCTestrunPths, nil
-}
-
-func (b XcodebuildBuilder) builtTestDirPath(xctestrunPths []string, symRoot, configuration string) (string, error) {
-	// Without better solution the step determines the build target based on the xctestrun file name.
-	//
-	// xctestrun file name layout (without Test Plans): <scheme>_<destination>.xctestrun
-	// 	example: ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
-	//
-	// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
-	//	example: BullsEye_FullTests_iphonesimulator15.5-arm64-x86_64.xctestrun
-	var builtForDestination string
-	for _, xctestrunPth := range xctestrunPths {
-		var destination string
-		if strings.Contains(xctestrunPth, "_iphonesimulator") {
-			destination = "iphonesimulator"
-		} else {
-			destination = "iphoneos"
-		}
-
-		if builtForDestination == "" {
-			builtForDestination = destination
-		} else if builtForDestination != destination {
-			return "", fmt.Errorf("xctestrun files with different destinations")
-		}
-	}
-
-	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
-	if exist, err := b.pathChecker.IsPathExists(builtTestDir); err != nil {
-		return "", fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
-	} else if !exist {
-		return "", fmt.Errorf("built test directory does not exist at: %s", builtTestDir)
-	}
-
-	return builtTestDir, nil
-}
-
-func xctestrunPathPattern(symRoot, scheme string) string {
-	return filepath.Join(symRoot, fmt.Sprintf("%s*.xctestrun", scheme))
 }

@@ -151,6 +151,35 @@ workflows:
     after_run:
     - _run
 
+  test_test_plan_enabled_project:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
+    - BITRISE_SCHEME: BullsEye
+    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - CODE_SIGNING_METHOD: "off"
+    - XCTESTRUN: $BITRISE_TEST_BUNDLE_PATH/BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun
+    before_run:
+    - _run
+    after_run:
+    - _run_test_withouth_building
+
+  test_test_plan_enabled_project_test_plan_specified:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
+    - BITRISE_SCHEME: BullsEye
+    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - CODE_SIGNING_METHOD: "off"
+    - TEST_PLAN: UnitTests
+    - XCTESTRUN: $BITRISE_XCTESTRUN_FILE_PATH
+    before_run:
+    - _run
+    after_run:
+    - _run_test_withouth_building
+
   _run:
     steps:
     - script:
@@ -171,8 +200,10 @@ workflows:
         inputs:
         - project_path: ./_tmp/$BITRISE_PROJECT_PATH
         - scheme: $BITRISE_SCHEME
-        - output_tool: xcodebuild
+        - destination: $DESTINATION
+        - test_plan: $TEST_PLAN
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
+        - output_tool: xcodebuild
         - automatic_code_signing: $CODE_SIGNING_METHOD
         - certificate_url_list: $CERTIFICATE_URL_LIST
         - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
@@ -194,6 +225,13 @@ workflows:
   _run_device_tests:
     steps:
     - virtual-device-testing-for-ios: { }
+
+  _run_test_withouth_building:
+    steps:
+    - git::https://github.com/bitrise-steplib/bitrise-step-xcode-test-without-building.git@step-init:
+        inputs:
+        - xctestrun: $XCTESTRUN
+        - destination: $DESTINATION
 
   _expose_xcode_version:
     steps:
