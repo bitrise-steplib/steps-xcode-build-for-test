@@ -28,7 +28,6 @@ import (
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	xcodebuild2 "github.com/bitrise-steplib/steps-xcode-build-for-test/xcodebuild"
 	"github.com/kballard/go-shellquote"
 )
@@ -280,22 +279,12 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	b.logger.Println()
 	b.logger.Infof("Running xcodebuild")
 
-	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, xcworkspace.IsWorkspace(cfg.ProjectPath), "")
+	xcodeBuildCmd := xcodebuild.NewCommandBuilder(cfg.ProjectPath, "build-for-testing")
 	xcodeBuildCmd.SetScheme(cfg.Scheme)
 	xcodeBuildCmd.SetConfiguration(cfg.Configuration)
-	xcodeBuildCmd.SetCustomBuildAction("build-for-testing")
 	xcodeBuildCmd.SetDestination(cfg.Destination)
-
-	var options []string
-	// TODO: add setter method for specifying Test Plan on xcodeBuildCmd
-	if cfg.TestPlan != "" {
-		options = append(options, "-testPlan", cfg.TestPlan)
-	}
-	if len(cfg.XcodebuildOptions) > 0 {
-		options = append(options, cfg.XcodebuildOptions...)
-	}
-
-	xcodeBuildCmd.SetCustomOptions(options)
+	xcodeBuildCmd.SetTestPlan(cfg.TestPlan)
+	xcodeBuildCmd.SetCustomOptions(cfg.XcodebuildOptions)
 
 	if cfg.XCConfig != "" {
 		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
@@ -533,7 +522,7 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
 	}
 
-	b.logger.Printf("xctestrun file(s) generated during the build:\n- %s", strings.Join(xctestrunPths, "\n- "))
+	b.logger.Donef("xctestrun file(s) generated during the build:\n- %s", strings.Join(xctestrunPths, "\n- "))
 
 	var defaultXCTestrunPth string
 	if len(xctestrunPths) > 1 {

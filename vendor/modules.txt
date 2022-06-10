@@ -36,7 +36,7 @@ github.com/bitrise-io/go-utils/v2/env
 github.com/bitrise-io/go-utils/v2/fileutil
 github.com/bitrise-io/go-utils/v2/log
 github.com/bitrise-io/go-utils/v2/pathutil
-# github.com/bitrise-io/go-xcode v1.0.9-0.20220610072120-a168274b7db0
+# github.com/bitrise-io/go-xcode v1.0.9-0.20220610092842-7e1e9efe7d87
 ## explicit; go 1.15
 github.com/bitrise-io/go-xcode/appleauth
 github.com/bitrise-io/go-xcode/certificateutil
