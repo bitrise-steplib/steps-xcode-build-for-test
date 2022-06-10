@@ -27,6 +27,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/xcpretty"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
+	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	xcodebuild2 "github.com/bitrise-steplib/steps-xcode-build-for-test/xcodebuild"
 	"github.com/kballard/go-shellquote"
@@ -254,10 +255,11 @@ func (b XcodebuildBuilder) InstallDependencies(useXCPretty bool) error {
 }
 
 type RunOut struct {
-	XcodebuildLog string
-	BuiltTestDir  string
-	XctestrunPths []string
-	SYMRoot       string
+	XcodebuildLog       string
+	BuiltTestDir        string
+	XctestrunPths       []string
+	DefaultXctestrunPth string
+	SYMRoot             string
 }
 
 func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
@@ -344,6 +346,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 
 	result.BuiltTestDir = testBundle.BuiltTestDir
 	result.XctestrunPths = testBundle.XctestrunPths
+	result.DefaultXctestrunPth = testBundle.DefaultXctestrunPth
 	result.SYMRoot = testBundle.SYMRoot
 
 	return result, nil
@@ -368,7 +371,7 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 		return nil
 	}
 
-	if err := b.exportTestBundle(opts.OutputDir, opts.BuiltTestDir, opts.XctestrunPths); err != nil {
+	if err := b.exportTestBundle(opts.OutputDir, opts.BuiltTestDir, opts.XctestrunPths, opts.DefaultXctestrunPth); err != nil {
 		log.Warnf("%s", err)
 	}
 
@@ -378,13 +381,13 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
 	xcodebuildLogPath := filepath.Join(outputDir, xcodebuildLogBaseName)
 	if err := output.ExportOutputFileContent(xcodebuildLog, xcodebuildLogPath, xcodebuildLogPathEnvKey); err != nil {
-		return fmt.Errorf("failed to export %s, error: %s", xcodebuildLogPathEnvKey, err)
+		return fmt.Errorf("failed to export %s, error: %w", xcodebuildLogPathEnvKey, err)
 	}
 	b.logger.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
 	return nil
 }
 
-func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xctestrunPths []string) error {
+func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xctestrunPths []string, defaultXctestrunPth string) error {
 	// BITRISE_TEST_BUNDLE_PATH
 	tmpDir, err := v2pathutil.NewPathProvider().CreateTempDir("test_bundle")
 	if err != nil {
@@ -396,6 +399,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 	}
 	copiedTestDirDestination := filepath.Join(tmpDir, filepath.Base(builtTestDir))
 
+	var copiedDefaultXctestrunPth string
 	var copiedXctestrunPths []string
 	for _, xctestrunPth := range xctestrunPths {
 		xctestrunDestination := filepath.Join(tmpDir, filepath.Base(xctestrunPth))
@@ -403,6 +407,9 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 			return err
 		}
 		copiedXctestrunPths = append(copiedXctestrunPths, xctestrunDestination)
+		if xctestrunPth == defaultXctestrunPth {
+			copiedDefaultXctestrunPth = xctestrunDestination
+		}
 	}
 
 	if err := tools.ExportEnvironmentWithEnvman(testBundlePathEnvKey, tmpDir); err != nil {
@@ -439,15 +446,14 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 	b.logger.Donef("The built target directory is available in %s env: %s", builtTargetBinariesDirEnvKey, copiedTestDirDestination)
 
 	// BITRISE_XCTESTRUN_FILE_PATH
-	// TODO: export the scheme's default Test Plan's xctestrun
-	xctestrunPth := copiedXctestrunPths[0]
+
 	if len(copiedXctestrunPths) > 0 {
-		log.Warnf("Multiple xctesrun files generated, exporting the first (%s) under BITRISE_XCTESTRUN_FILE_PATH", xctestrunPth)
+		log.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", copiedDefaultXctestrunPth)
 	}
-	if err := output.ExportOutputFile(xctestrunPth, xctestrunPth, xctestrunPathEnvKey); err != nil {
+	if err := output.ExportOutputFile(copiedDefaultXctestrunPth, copiedDefaultXctestrunPth, xctestrunPathEnvKey); err != nil {
 		return err
 	}
-	b.logger.Donef("The built xctestrun file is available in %s env: %s", xctestrunPathEnvKey, xctestrunPth)
+	b.logger.Donef("The built xctestrun file is available in %s env: %s", xctestrunPathEnvKey, copiedDefaultXctestrunPth)
 
 	return nil
 }
@@ -492,9 +498,10 @@ type findTestBundleOpts struct {
 }
 
 type testBundle struct {
-	BuiltTestDir  string
-	XctestrunPths []string
-	SYMRoot       string
+	BuiltTestDir        string
+	XctestrunPths       []string
+	DefaultXctestrunPth string
+	SYMRoot             string
 }
 
 func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
@@ -526,7 +533,33 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
 	}
 
-	b.logger.Donef("xctestrun file(s) generated during the build:\n- %s", strings.Join(xctestrunPths, "\n- "))
+	b.logger.Printf("xctestrun file(s) generated during the build:\n- %s", strings.Join(xctestrunPths, "\n- "))
+
+	var defaultXCTestrunPth string
+	if len(xctestrunPths) > 1 {
+		scheme, _, err := schemeint.Scheme(opts.ProjectPath, opts.Scheme)
+		if err != nil {
+			return testBundle{}, err
+		}
+
+		var defaultTestPlanName string
+		if testPlan := scheme.DefaultTestPlan(); testPlan != nil {
+			defaultTestPlanName = testPlan.Name()
+		}
+
+		if defaultTestPlanName != "" {
+			for _, xctestrunPth := range xctestrunPths {
+				// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
+				if strings.Contains(filepath.Base(xctestrunPth), fmt.Sprintf("_%s_", defaultTestPlanName)) {
+					b.logger.Donef("default xctestrun based on %s scheme's default test plan (%s): %s", opts.Scheme, defaultTestPlanName, xctestrunPth)
+					defaultXCTestrunPth = xctestrunPth
+				}
+			}
+		}
+	}
+	if defaultXCTestrunPth == "" {
+		defaultXCTestrunPth = xctestrunPths[0]
+	}
 
 	builtTestDir, err := b.builtTestDirPath(xctestrunPths, symRoot, opts.Configuration)
 	if err != nil {
@@ -536,9 +569,10 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 	b.logger.Donef("Built test directory: %s", builtTestDir)
 
 	return testBundle{
-		BuiltTestDir:  builtTestDir,
-		XctestrunPths: xctestrunPths,
-		SYMRoot:       symRoot,
+		BuiltTestDir:        builtTestDir,
+		XctestrunPths:       xctestrunPths,
+		DefaultXctestrunPth: defaultXCTestrunPth,
+		SYMRoot:             symRoot,
 	}, nil
 }
 
@@ -548,11 +582,6 @@ func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, scheme string, build
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for xctestrun file using pattern (%s): %w", xctestrunPthPattern, err)
 	}
-	//b.logger.Printf("xctestrun paths: %s", strings.Join(xctestrunPths, ", "))
-
-	//if len(xctestrunPths) == 0 {
-	//	return testBundle{}, fmt.Errorf("no xctestrun file found with pattern: %s", xctestrunPthPattern)
-	//}
 
 	var builtXCTestrunPths []string
 	for _, xctestrunPth := range xctestrunPths {

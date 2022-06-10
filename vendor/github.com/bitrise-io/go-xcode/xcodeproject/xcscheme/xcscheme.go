@@ -6,8 +6,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 )
 
@@ -70,6 +72,25 @@ func (r TestableReference) isTestable() bool {
 	return r.Skipped == "NO" && r.BuildableReference.isTestProduct()
 }
 
+// TestPlanReference ...
+type TestPlanReference struct {
+	Reference string `xml:"reference,attr,omitempty"`
+	Default   string `xml:"default,attr,omitempty"`
+}
+
+// IsDefault ...
+func (r TestPlanReference) IsDefault() bool {
+	return r.Default == "YES"
+}
+
+// Name ...
+func (r TestPlanReference) Name() string {
+	// reference = "container:FullTests.xctestplan"
+	idx := strings.Index(r.Reference, ":")
+	testPlanFileName := r.Reference[idx+1:]
+	return strings.TrimSuffix(testPlanFileName, filepath.Ext(testPlanFileName))
+}
+
 // MacroExpansion ...
 type MacroExpansion struct {
 	BuildableReference BuildableReference
@@ -77,6 +98,11 @@ type MacroExpansion struct {
 
 // AdditionalOptions ...
 type AdditionalOptions struct {
+}
+
+// TestPlans ...
+type TestPlans struct {
+	TestPlanReferences []TestPlanReference `xml:"TestPlanReference,omitempty"`
 }
 
 // TestAction ...
@@ -87,6 +113,7 @@ type TestAction struct {
 	ShouldUseLaunchSchemeArgsEnv string `xml:"shouldUseLaunchSchemeArgsEnv,attr"`
 
 	Testables         []TestableReference `xml:"Testables>TestableReference"`
+	TestPlans         *TestPlans
 	MacroExpansion    MacroExpansion
 	AdditionalOptions AdditionalOptions
 }
@@ -154,6 +181,8 @@ type Scheme struct {
 
 // Open ...
 func Open(pth string) (Scheme, error) {
+	var start = time.Now()
+
 	b, err := fileutil.ReadBytesFromFile(pth)
 	if err != nil {
 		return Scheme{}, err
@@ -166,6 +195,8 @@ func Open(pth string) (Scheme, error) {
 
 	scheme.Name = strings.TrimSuffix(filepath.Base(pth), filepath.Ext(pth))
 	scheme.Path = pth
+
+	log.Printf("Read %s scheme in %s.", scheme.Name, time.Since(start).Round(time.Second))
 
 	return scheme, nil
 }
@@ -248,4 +279,20 @@ func (s Scheme) IsTestable() bool {
 	}
 
 	return false
+}
+
+// DefaultTestPlan ...
+func (s Scheme) DefaultTestPlan() *TestPlanReference {
+	if s.TestAction.TestPlans == nil {
+		return nil
+	}
+
+	testPlans := *s.TestAction.TestPlans
+
+	for _, testPlanRef := range testPlans.TestPlanReferences {
+		if testPlanRef.IsDefault() {
+			return &testPlanRef
+		}
+	}
+	return nil
 }
