@@ -39,6 +39,7 @@ workflows:
     - SAMPLE_APP_BRANCH: codesign-update
     - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
     - BITRISE_SCHEME: sample swiftpm
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -53,6 +54,7 @@ workflows:
     - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
     - BITRISE_SCHEME: sample-apps-fastlane-test
     - BITRISE_CONFIGURATION: Debug
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -66,6 +68,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: "off"
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -80,6 +83,7 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
     - BITRISE_SCHEME: sample-apps-fastlane-test
+    - DESTINATION: generic/platform=iOS
     - BITRISE_CONFIGURATION: Debug
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
@@ -94,6 +98,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -106,6 +111,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -118,6 +124,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -131,6 +138,7 @@ workflows:
     - SAMPLE_APP_BRANCH: automatic-signing
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
+    - DESTINATION: generic/platform=iOS
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -144,6 +152,7 @@ workflows:
     - SAMPLE_APP_BRANCH: bundle_id
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: ios-simple-objc
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
