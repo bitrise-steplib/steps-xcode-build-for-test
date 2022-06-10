@@ -168,7 +168,7 @@ workflows:
     - BITRISE_SCHEME: BullsEye
     - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
-    - XCTESTRUN: $BITRISE_TEST_BUNDLE_PATH/BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun
+    - XCTESTRUN: $BITRISE_TEST_BUNDLE_PATH/BullsEye_FullTests_iphonesimulator15.5-x86_64.xctestrun
     before_run:
     - _run
     after_run:
