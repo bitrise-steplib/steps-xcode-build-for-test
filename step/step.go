@@ -27,8 +27,8 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/xcpretty"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
-	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
 	xcodebuild2 "github.com/bitrise-steplib/steps-xcode-build-for-test/xcodebuild"
+	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
 	"github.com/kballard/go-shellquote"
 )
 
@@ -96,15 +96,17 @@ type Config struct {
 type XcodebuildBuilder struct {
 	logger         v2log.Logger
 	xcodebuild     xcodebuild2.Xcodebuild
+	xcodeproject   xcodeproject.XcodeProject
 	modtimeChecker ModtimeChecker
 	pathChecker    v2pathutil.PathChecker
 	filepathGlober FilepathGlober
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild, modtimeChecker ModtimeChecker, pathChecker v2pathutil.PathChecker, filepathGlober FilepathGlober) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodebuild xcodebuild2.Xcodebuild, xcodeproject xcodeproject.XcodeProject, modtimeChecker ModtimeChecker, pathChecker v2pathutil.PathChecker, filepathGlober FilepathGlober) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		logger:         logger,
 		xcodebuild:     xcodebuild,
+		xcodeproject:   xcodeproject,
 		modtimeChecker: modtimeChecker,
 		pathChecker:    pathChecker,
 		filepathGlober: filepathGlober,
@@ -500,7 +502,7 @@ func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, projectPath, schemeN
 	// find default xctestrun file
 	var defaultXctestrunPth string
 	if len(builtXctestrunPths) > 1 {
-		scheme, _, err := schemeint.Scheme(projectPath, schemeName)
+		scheme, err := b.xcodeproject.Scheme(projectPath, schemeName)
 		if err != nil {
 			return nil, "", err
 		}
