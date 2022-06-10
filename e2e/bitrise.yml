@@ -168,7 +168,6 @@ workflows:
     - BITRISE_SCHEME: BullsEye
     - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
-    - XCTESTRUN: $BITRISE_TEST_BUNDLE_PATH/BullsEye_FullTests_iphonesimulator15.5-x86_64.xctestrun
     before_run:
     - _run
     after_run:
@@ -183,7 +182,6 @@ workflows:
     - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
-    - XCTESTRUN: $BITRISE_XCTESTRUN_FILE_PATH
     before_run:
     - _run
     after_run:
@@ -239,7 +237,7 @@ workflows:
     steps:
     - git::https://github.com/bitrise-steplib/bitrise-step-xcode-test-without-building.git@step-init:
         inputs:
-        - xctestrun: $XCTESTRUN
+        - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION
 
   _expose_xcode_version:
