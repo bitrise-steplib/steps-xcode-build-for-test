@@ -231,7 +231,9 @@ workflows:
 
   _run_device_tests:
     steps:
-    - virtual-device-testing-for-ios: { }
+    - virtual-device-testing-for-ios:
+        inputs:
+        - test_devices: "iphone13pro,15.2,en,portrait"
 
   _run_test_withouth_building:
     steps:
