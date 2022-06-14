@@ -81,7 +81,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		ExportMethod:               codesignConfig.DistributionMethod,
 		XcodeMajorVersion:          int(xcodeMajorVersion),
 		RegisterTestDevices:        managerOpts.RegisterTestDevices,
-		SignUITests:                true,
+		SignTestTargets:            true,
 		MinDaysProfileValidity:     managerOpts.MinDaysProfileValid,
 		IsVerboseLog:               managerOpts.VerboseLog,
 	}
@@ -90,6 +90,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		ProjectOrWorkspacePath: managerOpts.ProjectPath,
 		SchemeName:             managerOpts.Scheme,
 		ConfigurationName:      managerOpts.Configuration,
+		XcodeMajorVersion:      int(xcodeMajorVersion),
 	})
 	if err != nil {
 		return codesign.Manager{}, err
