@@ -24,7 +24,7 @@ import (
 type ProjectHelper struct {
 	MainTarget       xcodeproj.Target
 	DependentTargets []xcodeproj.Target
-	TestTargets      []xcodeproj.Target
+	UITestTargets    []xcodeproj.Target
 	XcProj           xcodeproj.XcodeProj
 	Configuration    string
 
@@ -34,7 +34,7 @@ type ProjectHelper struct {
 // NewProjectHelper checks the provided project or workspace and generate a ProjectHelper with the provided scheme and configuration
 // Previously in the ruby version the initialize method did the same
 // It returns a new ProjectHelper, whose Configuration field contains is the selected configuration (even when configurationName parameter is empty)
-func NewProjectHelper(projOrWSPath, schemeName, configurationName string, xcodeMajorVersion int) (*ProjectHelper, error) {
+func NewProjectHelper(projOrWSPath, schemeName, configurationName string) (*ProjectHelper, error) {
 	if exits, err := pathutil.IsPathExists(projOrWSPath); err != nil {
 		return nil, err
 	} else if !exits {
@@ -61,16 +61,10 @@ func NewProjectHelper(projOrWSPath, schemeName, configurationName string, xcodeM
 		}
 	}
 
-	var testTargets []xcodeproj.Target
+	var uiTestTargets []xcodeproj.Target
 	for _, target := range xcproj.Proj.Targets {
-		requiresCodeSigning := false
-		if xcodeMajorVersion < 14 {
-			requiresCodeSigning = target.IsUITestProduct()
-		} else {
-			requiresCodeSigning = target.IsUITestProduct() || target.IsTestProduct()
-		}
-		if requiresCodeSigning && target.DependsOn(mainTarget.ID) {
-			testTargets = append(testTargets, target)
+		if target.IsUITestProduct() && target.DependsOn(mainTarget.ID) {
+			uiTestTargets = append(uiTestTargets, target)
 		}
 	}
 
@@ -85,7 +79,7 @@ func NewProjectHelper(projOrWSPath, schemeName, configurationName string, xcodeM
 	return &ProjectHelper{
 		MainTarget:       mainTarget,
 		DependentTargets: dependentTargets,
-		TestTargets:      testTargets,
+		UITestTargets:    uiTestTargets,
 		XcProj:           xcproj,
 		Configuration:    conf,
 	}, nil
@@ -117,11 +111,11 @@ func (p *ProjectHelper) ArchivableTargetBundleIDToEntitlements() (map[string]aut
 	return entitlementsByBundleID, nil
 }
 
-// TestTargetBundleIDs ...
-func (p *ProjectHelper) TestTargetBundleIDs() ([]string, error) {
+// UITestTargetBundleIDs ...
+func (p *ProjectHelper) UITestTargetBundleIDs() ([]string, error) {
 	var bundleIDs []string
 
-	for _, target := range p.TestTargets {
+	for _, target := range p.UITestTargets {
 		bundleID, err := p.TargetBundleID(target.Name, p.Configuration)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get target (%s) bundle id: %s", target.Name, err)

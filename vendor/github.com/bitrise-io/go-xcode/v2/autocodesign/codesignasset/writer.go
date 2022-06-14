@@ -53,7 +53,7 @@ func (w Writer) Write(codesignAssetsByDistributionType map[autocodesign.Distribu
 			}
 		}
 
-		for _, profile := range codesignAssets.TestTargetProfilesByBundleID {
+		for _, profile := range codesignAssets.UITestTargetProfilesByBundleID {
 			log.Printf("- %s", profile.Attributes().Name)
 
 			if err := w.InstallProfile(profile); err != nil {
