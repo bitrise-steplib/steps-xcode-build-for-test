@@ -23,6 +23,7 @@ import (
 	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
+	"github.com/bitrise-io/go-xcode/v2/destination"
 	"github.com/bitrise-io/go-xcode/v2/xcconfig"
 	"github.com/bitrise-io/go-xcode/v2/xcpretty"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
@@ -45,6 +46,13 @@ const (
 	codeSignSourceOff     = "off"
 	codeSignSourceAPIKey  = "api-key"
 	codeSignSourceAppleID = "apple-id"
+)
+
+type BuildTarget int
+
+const (
+	SimulatorTarget BuildTarget = iota
+	DeviceTarget
 )
 
 type Input struct {
@@ -82,6 +90,7 @@ type Config struct {
 	Scheme                 string
 	Configuration          string
 	Destination            string
+	BuildTarget            BuildTarget
 	TestPlan               string
 	XCConfig               string
 	XcodebuildOptions      []string
@@ -119,6 +128,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	if err := parser.Parse(&input); err != nil {
 		return Config{}, err
 	}
+
 	b.logger.EnableDebugLog(input.VerboseLog)
 	log.SetEnableDebugLog(input.VerboseLog)
 
@@ -143,7 +153,6 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
-	factory := v2command.NewFactory(env.NewRepository())
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
@@ -174,8 +183,26 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
+	specifier, err := destination.NewSpecifier(input.Destination)
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid destination provided: %s", err)
+	}
+	platform, _ := specifier.Platform()
+
+	var buildTarget BuildTarget
+	switch platform {
+	case destination.IOSSimulator:
+		buildTarget = SimulatorTarget
+	case destination.IOS:
+		buildTarget = DeviceTarget
+	default:
+		return Config{}, fmt.Errorf("provided destination specifies unsupported platform: %s, supported platforms: %s, %s", platform, destination.IOSSimulator, destination.IOS)
+	}
+
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
+		factory := v2command.NewFactory(env.NewRepository())
+
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
 			ProjectPath:               absProjectPath,
 			Scheme:                    input.Scheme,
@@ -203,6 +230,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
+		BuildTarget:            buildTarget,
 		TestPlan:               input.TestPlan,
 		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,
@@ -328,6 +356,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 		ProjectPath:       cfg.ProjectPath,
 		Scheme:            cfg.Scheme,
 		Configuration:     cfg.Configuration,
+		BuildTarget:       cfg.BuildTarget,
 		XcodebuildOptions: cfg.XcodebuildOptions,
 		BuildInterval:     buildInterval,
 	})
@@ -404,6 +433,7 @@ type findTestBundleOpts struct {
 	ProjectPath       string
 	Scheme            string
 	Configuration     string
+	BuildTarget       BuildTarget
 	XcodebuildOptions []string
 	BuildInterval     timeInterval
 }
@@ -460,7 +490,7 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		return testBundle{}, fmt.Errorf("no xctestrun file generated during the build")
 	}
 
-	builtTestDir, err := b.findBuiltTestDirPath(xctestrunPths, symRoot, opts.Configuration)
+	builtTestDir, err := b.findBuiltTestDirPath(opts.BuildTarget, symRoot, opts.Configuration)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to find built test directory: %w", err)
 	}
@@ -530,29 +560,16 @@ func (b XcodebuildBuilder) findBuiltXCTestrunFiles(symRoot, projectPath, schemeN
 }
 
 // findBuiltTestDirPath searches for the directory storing built target and associated tests based on the xctestrun file name.
-func (b XcodebuildBuilder) findBuiltTestDirPath(xctestrunPths []string, symRoot, configuration string) (string, error) {
-	var builtForDestination string
-	for _, xctestrunPth := range xctestrunPths {
-		// xctestrun file name layout (without Test Plans): <scheme>_<destination>.xctestrun
-		// 	example: ios-simple-objc_iphonesimulator12.0-x86_64.xctestrun
-		//
-		// xctestrun file name layout with Test Plans: <scheme>_<test_plan>_<destination>.xctestrun
-		//	example: BullsEye_FullTests_iphonesimulator15.5-arm64-x86_64.xctestrun
-		var destination string
-		if strings.Contains(xctestrunPth, "_iphonesimulator") {
-			destination = "iphonesimulator"
-		} else {
-			destination = "iphoneos"
-		}
-
-		if builtForDestination == "" {
-			builtForDestination = destination
-		} else if builtForDestination != destination {
-			return "", fmt.Errorf("xctestrun files with different destinations")
-		}
+func (b XcodebuildBuilder) findBuiltTestDirPath(buildTarget BuildTarget, symRoot, configuration string) (string, error) {
+	var builtTestDirName string
+	if buildTarget == SimulatorTarget {
+		builtTestDirName = "iphonesimulator"
+	} else {
+		builtTestDirName = "iphoneos"
 	}
+	builtTestDirName = fmt.Sprintf("%s-%s", configuration, builtTestDirName)
 
-	builtTestDir := filepath.Join(symRoot, fmt.Sprintf("%s-%s", configuration, builtForDestination))
+	builtTestDir := filepath.Join(symRoot, builtTestDirName)
 	if exist, err := b.pathChecker.IsPathExists(builtTestDir); err != nil {
 		return "", fmt.Errorf("failed to check if built test directory exists (%s): %w", builtTestDir, err)
 	} else if !exist {
