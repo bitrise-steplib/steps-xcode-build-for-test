@@ -19,7 +19,6 @@ import (
 	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
-	"github.com/bitrise-io/go-xcode/v2/destination"
 	"github.com/bitrise-io/go-xcode/v2/xcconfig"
 	"github.com/bitrise-io/go-xcode/v2/xcpretty"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
@@ -42,13 +41,6 @@ const (
 	codeSignSourceOff     = "off"
 	codeSignSourceAPIKey  = "api-key"
 	codeSignSourceAppleID = "apple-id"
-)
-
-type BuildTarget int
-
-const (
-	SimulatorTarget BuildTarget = iota
-	DeviceTarget
 )
 
 type Input struct {
@@ -86,7 +78,6 @@ type Config struct {
 	Scheme                 string
 	Configuration          string
 	Destination            string
-	BuildTarget            BuildTarget
 	TestPlan               string
 	XCConfig               string
 	XcodebuildOptions      []string
@@ -177,22 +168,6 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
-	specifier, err := destination.NewSpecifier(input.Destination)
-	if err != nil {
-		return Config{}, fmt.Errorf("invalid destination provided: %s", err)
-	}
-	platform, _ := specifier.Platform()
-
-	var buildTarget BuildTarget
-	switch platform {
-	case destination.IOSSimulator:
-		buildTarget = SimulatorTarget
-	case destination.IOS:
-		buildTarget = DeviceTarget
-	default:
-		return Config{}, fmt.Errorf("provided destination specifies unsupported platform: %s, supported platforms: %s, %s", platform, destination.IOSSimulator, destination.IOS)
-	}
-
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		factory := v2command.NewFactory(env.NewRepository())
@@ -224,7 +199,6 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		Scheme:                 input.Scheme,
 		Configuration:          input.Configuration,
 		Destination:            input.Destination,
-		BuildTarget:            buildTarget,
 		TestPlan:               input.TestPlan,
 		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,

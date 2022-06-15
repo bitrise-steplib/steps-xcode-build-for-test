@@ -70,7 +70,6 @@ github.com/bitrise-io/go-xcode/v2/autocodesign/localcodesignasset
 github.com/bitrise-io/go-xcode/v2/autocodesign/profiledownloader
 github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager
 github.com/bitrise-io/go-xcode/v2/codesign
-github.com/bitrise-io/go-xcode/v2/destination
 github.com/bitrise-io/go-xcode/v2/xcarchive
 github.com/bitrise-io/go-xcode/v2/xcconfig
 github.com/bitrise-io/go-xcode/v2/xcodebuild
