@@ -325,12 +325,6 @@ outputs:
     title: Zipped Test Bundle directory
     summary: Zipped directory of the built targets' binaries and built associated tests.
 
-# TODO: is it used or is it a useful output?
-- BITRISE_TEST_DIR_PATH:
-  opts:
-    title: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
-    summary: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
-
 - BITRISE_XCTESTRUN_FILE_PATH:
   opts:
     title: xctestrun file path
