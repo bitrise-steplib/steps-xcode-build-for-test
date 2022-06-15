@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
@@ -15,25 +14,17 @@ import (
 	"github.com/bitrise-io/go-xcode/xcpretty"
 )
 
-type timeInterval struct {
-	start time.Time
-	end   time.Time
-}
-
-func runCommandWithRetry(cmd *xcodebuild.CommandBuilder, useXcpretty bool, swiftPackagesPath string) (string, timeInterval, error) {
-	var buildInterval timeInterval
-
-	output, buildInterval, err := runCommand(cmd, useXcpretty)
-	buildInterval.end = time.Now()
+func runCommandWithRetry(cmd *xcodebuild.CommandBuilder, useXcpretty bool, swiftPackagesPath string) (string, error) {
+	output, err := runCommand(cmd, useXcpretty)
 	if err != nil && swiftPackagesPath != "" && strings.Contains(output, cache.SwiftPackagesStateInvalid) {
 		log.Warnf("Build failed, swift packages cache is in an invalid state: %s", err)
 		log.RWarnf("xcode-build-for-test", "swift-packages-cache-invalid", nil, "swift packages cache is in an invalid state")
 		if err := os.RemoveAll(swiftPackagesPath); err != nil {
-			return output, buildInterval, fmt.Errorf("failed to remove invalid swift package caches: %w", err)
+			return output, fmt.Errorf("failed to remove invalid swift package caches: %w", err)
 		}
 		return runCommand(cmd, useXcpretty)
 	}
-	return output, buildInterval, err
+	return output, err
 }
 
 func prepareCommand(xcodeCmd *xcodebuild.CommandBuilder, useXcpretty bool, output *bytes.Buffer) (*command.Model, *xcpretty.CommandModel) {
@@ -48,25 +39,20 @@ func prepareCommand(xcodeCmd *xcodebuild.CommandBuilder, useXcpretty bool, outpu
 	return buildRootCmd, nil
 }
 
-func runCommand(buildCmd *xcodebuild.CommandBuilder, useXcpretty bool) (string, timeInterval, error) {
+func runCommand(buildCmd *xcodebuild.CommandBuilder, useXcpretty bool) (string, error) {
 	var output bytes.Buffer
 	xcodebuildCmd, xcprettyCmd := prepareCommand(buildCmd, useXcpretty, &output)
-	var buildInterval timeInterval
 
 	if xcprettyCmd != nil {
 		log.Donef(" $ %s", xcprettyCmd.PrintableCmd())
 		fmt.Println()
 
-		buildInterval.start = time.Now()
 		output, err := xcprettyCmd.Run()
-		buildInterval.end = time.Now()
-		return output, buildInterval, err
+		return output, err
 	}
 	log.Donef("$ %s", xcodebuildCmd.PrintableCommandArgs())
 	fmt.Println()
 
-	buildInterval.start = time.Now()
 	err := xcodebuildCmd.Run()
-	buildInterval.end = time.Now()
-	return output.String(), buildInterval, err
+	return output.String(), err
 }

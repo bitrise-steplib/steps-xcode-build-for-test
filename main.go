@@ -6,7 +6,6 @@ import (
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
-	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodebuild"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
 )
 
@@ -52,11 +51,10 @@ func run() int {
 }
 
 func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
-	xcbuild := xcodebuild.NewXcodebuild()
 	xcproject := xcodeproject.NewXcodeProject()
-	modtimeChecker := step.NewModtimeChecker(logger)
 	pathChecker := pathutil.NewPathChecker()
-	filepathGlobber := step.NewFilepathGlober()
+	pathProvider := pathutil.NewPathProvider()
+	dirReader := step.NewDirReader()
 
-	return step.NewXcodebuildBuilder(logger, xcbuild, xcproject, modtimeChecker, pathChecker, filepathGlobber)
+	return step.NewXcodebuildBuilder(logger, xcproject, pathChecker, pathProvider, dirReader)
 }

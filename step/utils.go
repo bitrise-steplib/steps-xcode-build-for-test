@@ -1,56 +1,26 @@
 package step
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 )
 
-type ModtimeChecker interface {
-	ModifiedInTimeFrame(pth string, start, end time.Time) (bool, error)
+type DirReader interface {
+	ReadDir(name string) ([]os.DirEntry, error)
 }
 
-type modtimeChecker struct {
-	logger log.Logger
+type dirReader struct {
 }
 
-func NewModtimeChecker(logger log.Logger) ModtimeChecker {
-	return modtimeChecker{
-		logger: logger,
-	}
+func NewDirReader() DirReader {
+	return dirReader{}
 }
 
-func (c modtimeChecker) ModifiedInTimeFrame(pth string, start, end time.Time) (bool, error) {
-	info, err := os.Stat(pth)
-	if err != nil {
-		return false, fmt.Errorf("failed to check %s modtime: %w", pth, err)
-	}
-	if !info.ModTime().Before(start) && !info.ModTime().After(end) {
-		return true, nil
-	}
-
-	c.logger.Warnf("xctestrun: %s was created at %s, which is outside of the window %s - %s ", pth, info.ModTime(), start, end)
-	return false, nil
-}
-
-type FilepathGlober interface {
-	Glob(pattern string) (matches []string, err error)
-}
-
-type filepathGlober struct {
-}
-
-func NewFilepathGlober() FilepathGlober {
-	return filepathGlober{}
-}
-
-func (g filepathGlober) Glob(pattern string) (matches []string, err error) {
-	return filepath.Glob(pattern)
+func (r dirReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(name)
 }
 
 func printLastLinesOfXcodebuildTestLog(rawXcodebuildOutput string, isRunSuccess bool, logger log.Logger) {
