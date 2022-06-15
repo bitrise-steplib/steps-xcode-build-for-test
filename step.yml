@@ -337,7 +337,7 @@ outputs:
     summary: File path of the built xctestrun file.
     description: |-
       File path of the built xctestrun file (example: `$SYMROOT/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`).
-      
+
       If `Test Plan` Step Input is set BITRISE_XCTESTRUN_FILE_PATH points to the provided Test Plan's xctestrun file.
       Otherwise points to the scheme's default Test Plan's xctestrun file (or to the first xctestrun without default Test Plan).
 
