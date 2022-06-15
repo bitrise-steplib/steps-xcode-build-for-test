@@ -34,12 +34,11 @@ import (
 )
 
 const (
-	testBundlePathEnvKey         = "BITRISE_TEST_BUNDLE_PATH"
-	testBundleZipPathEnvKey      = "BITRISE_TEST_BUNDLE_ZIP_PATH"
-	builtTargetBinariesDirEnvKey = "BITRISE_TEST_DIR_PATH"
-	xctestrunPathEnvKey          = "BITRISE_XCTESTRUN_FILE_PATH"
-	xcodebuildLogPathEnvKey      = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
-	xcodebuildLogBaseName        = "raw-xcodebuild-output.log"
+	testBundlePathEnvKey    = "BITRISE_TEST_BUNDLE_PATH"
+	testBundleZipPathEnvKey = "BITRISE_TEST_BUNDLE_ZIP_PATH"
+	xctestrunPathEnvKey     = "BITRISE_XCTESTRUN_FILE_PATH"
+	xcodebuildLogPathEnvKey = "BITRISE_XCODE_RAW_RESULT_TEXT_PATH"
+	xcodebuildLogBaseName   = "raw-xcodebuild-output.log"
 )
 
 const (
@@ -643,12 +642,6 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, builtTestDir string, xcte
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
-
-	// BITRISE_TEST_DIR_PATH
-	if err := output.ExportOutputDir(copiedTestDirDestination, copiedTestDirDestination, builtTargetBinariesDirEnvKey); err != nil {
-		return err
-	}
-	b.logger.Donef("The built target directory is available in %s env: %s", builtTargetBinariesDirEnvKey, copiedTestDirDestination)
 
 	// BITRISE_XCTESTRUN_FILE_PATH
 	if len(copiedXctestrunPths) > 0 {

@@ -223,7 +223,6 @@ workflows:
             BITRISE_XCTESTRUN_FILE_PATH
         - dirs: |-
             BITRISE_TEST_BUNDLE_PATH
-            BITRISE_TEST_DIR_PATH
         - deploy_dir: $BITRISE_DEPLOY_DIR
         - deployed_files: |-
             BITRISE_TEST_BUNDLE_ZIP_PATH
