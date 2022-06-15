@@ -1,8 +1,10 @@
 package step
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -505,7 +507,29 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 
 	// BITRISE_TEST_BUNDLE_ZIP_PATH
 	testBundleZipPth := filepath.Join(outputDir, "testbundle.zip")
-	if err := output.ZipAndExportOutput([]string{symroot}, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
+
+	entries, err := b.dirReader.ReadDir(symroot)
+	if err != nil {
+		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
+	}
+
+	args := []string{"-r", testBundleZipPth}
+	for _, entry := range entries {
+		args = append(args, entry.Name())
+	}
+
+	factory := v2command.NewFactory(env.NewRepository())
+	zipCmd := factory.Create("zip", args, &v2command.Opts{
+		Dir: symroot,
+	})
+	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
+		var exerr *exec.ExitError
+		if errors.As(err, &exerr) {
+			return fmt.Errorf("%s failed: %s", zipCmd.PrintableCommandArgs(), out)
+		}
+		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
+	}
+	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
