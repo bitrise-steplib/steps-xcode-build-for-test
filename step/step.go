@@ -442,7 +442,8 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 	for _, entry := range entries {
 		ext := filepath.Ext(entry.Name())
 		if ext == xctestrunExt {
-			xctestrunPths = append(xctestrunPths, entry.Name())
+			absXctestrunPth := filepath.Join(opts.SYMRoot, entry.Name())
+			xctestrunPths = append(xctestrunPths, absXctestrunPth)
 		}
 	}
 
