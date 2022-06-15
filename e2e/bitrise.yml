@@ -171,7 +171,7 @@ workflows:
     before_run:
     - _run
     after_run:
-    - _run_test_withouth_building
+    - _run_test_without_building
 
   test_test_plan_enabled_project_test_plan_specified:
     envs:
@@ -185,7 +185,7 @@ workflows:
     before_run:
     - _run
     after_run:
-    - _run_test_withouth_building
+    - _run_test_without_building
 
   _run:
     steps:
@@ -234,7 +234,7 @@ workflows:
         inputs:
         - test_devices: iphone13pro,15.2,en,portrait
 
-  _run_test_withouth_building:
+  _run_test_without_building:
     steps:
     - git::https://github.com/bitrise-steplib/bitrise-step-xcode-test-without-building.git@step-init:
         inputs:

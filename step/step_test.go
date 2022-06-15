@@ -23,7 +23,7 @@ func Test_GivenIosProjectProducesOneXctestrun_WhenFindTestBundle_ThenReturnsTest
 	stepMocks.logger.On("Donef", mock.Anything, mock.Anything).Return()
 	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
 	stepMocks.dirReader.On("ReadDir", mock.Anything).Return([]os.DirEntry{
-		createDirEntry(filepath.Join(symRoot, "BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun")),
+		createDirEntry("BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun"),
 	}, nil)
 
 	// When
@@ -53,9 +53,9 @@ func Test_GivenIosProjectProducesMultipleXctestrun_WhenFindTestBundle_ThenReturn
 	stepMocks.logger.On("Donef", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
 	stepMocks.dirReader.On("ReadDir", mock.Anything).Return([]os.DirEntry{
-		createDirEntry(filepath.Join(symRoot, "BullsEye_UnitTests_iphonesimulator15.5-arm64.xctestrun")),
-		createDirEntry(filepath.Join(symRoot, "BullsEye_UITests_iphonesimulator15.5-arm64.xctestrun")),
-		createDirEntry(filepath.Join(symRoot, "BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun")),
+		createDirEntry("BullsEye_UnitTests_iphonesimulator15.5-arm64.xctestrun"),
+		createDirEntry("BullsEye_UITests_iphonesimulator15.5-arm64.xctestrun"),
+		createDirEntry("BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun"),
 	}, nil)
 	stepMocks.xcodeproject.On("Scheme", project, scheme).Return(&xcscheme.Scheme{
 		TestAction: xcscheme.TestAction{
