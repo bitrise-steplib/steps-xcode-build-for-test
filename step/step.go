@@ -513,9 +513,20 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}
 
-	args := []string{"-r", testBundleZipPth}
+	var builtTestsDir string
 	for _, entry := range entries {
-		args = append(args, entry.Name())
+		if entry.IsDir() {
+			if builtTestsDir != "" {
+				return fmt.Errorf("multiple built test dir found in build output dir")
+			}
+			builtTestsDir = entry.Name()
+		}
+	}
+
+	args := []string{"-r", testBundleZipPth}
+	args = append(args, builtTestsDir)
+	for _, xctestrunPth := range xctestrunPths {
+		args = append(args, filepath.Base(xctestrunPth))
 	}
 
 	factory := v2command.NewFactory(env.NewRepository())
@@ -535,7 +546,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
 
 	// BITRISE_XCTESTRUN_FILE_PATH
-	if len(xctestrunPths) > 0 {
+	if len(xctestrunPths) > 1 {
 		b.logger.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", defaultXctestrunPth)
 	}
 	if err := output.ExportOutputFile(defaultXctestrunPth, defaultXctestrunPth, xctestrunPathEnvKey); err != nil {
