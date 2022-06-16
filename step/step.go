@@ -1,8 +1,10 @@
 package step
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -445,6 +447,9 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		ext := filepath.Ext(entry.Name())
 		if ext == xctestrunExt {
 			absXctestrunPth := filepath.Join(opts.SYMRoot, entry.Name())
+			if err := b.fixTestRoot(absXctestrunPth); err != nil {
+				return testBundle{}, fmt.Errorf("failed to apply TESTROOT fix on %s: %s", absXctestrunPth, err)
+			}
 			xctestrunPths = append(xctestrunPths, absXctestrunPth)
 		}
 	}
@@ -487,6 +492,32 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 		DefaultXctestrunPth: defaultXctestrunPth,
 		SYMRoot:             opts.SYMRoot,
 	}, nil
+}
+
+// fixTestRoot replaces "/private__TESTROOT__" with "__TESTROOT__" to achieve and xctestrun file,
+// that works well with Firebase TestLab.
+//
+// The "/private" suffix gets added to DependentProductPaths, TestHostPath and UITargetAppPath within the xctestrun file,
+// when setting a custom SYMROOT build setting on the `xcodebuild build-for-testing` command.
+//
+// Setting custom SYMROOT introduced to ease finding the Step generated outputs:
+// - xctestrun file(s)
+// - built targets and tests dir (for example: Debug-iphonesimulator)
+//
+// If we find an issue with this workaround, probably we need to get back to the old solution:
+// - do not modify the output dir on the xcodebuild command -> output will be placed into the DerivedData dir
+// - find all the existing xctestrun files in Xcode's DerivedData dir
+// - filter them for the build's timeframe (so that only the current step generated outputs are considered)
+// - find the built targets and tests dir based on the configuration and destination inputs
+func (b XcodebuildBuilder) fixTestRoot(xctestrunPth string) error {
+	c, err := ioutil.ReadFile(xctestrunPth)
+	if err != nil {
+		return err
+	}
+
+	newC := bytes.Replace(c, []byte("/private__TESTROOT__"), []byte("__TESTROOT__"), -1)
+
+	return ioutil.WriteFile(xctestrunPth, newC, 0666)
 }
 
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
