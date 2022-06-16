@@ -286,12 +286,14 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetTestPlan(cfg.TestPlan)
 
 	options := cfg.XcodebuildOptions
-	symRoot, err := b.pathProvider.CreateTempDir("test_bundle")
-	if err != nil {
-		return RunOut{}, err
+	symRoot := findBuildSetting(options, "SYMROOT")
+	if symRoot == "" {
+		symRoot, err = b.pathProvider.CreateTempDir("test_bundle")
+		if err != nil {
+			return RunOut{}, err
+		}
+		options = append(options, fmt.Sprintf("SYMROOT=%s", symRoot))
 	}
-	// TODO: make sure we set SYMROOT only once
-	options = append(options, fmt.Sprintf("SYMROOT=%s", symRoot))
 	xcodeBuildCmd.SetCustomOptions(options)
 
 	if cfg.XCConfig != "" {

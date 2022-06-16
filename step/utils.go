@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/stringutil"
@@ -54,4 +55,21 @@ The log file is stored in the output directory, and its full path
 is available in the $%s environment variable.
 Use Deploy to Bitrise.io step (after this step),
 to attach the file to your build as an artifact!`, xcodebuildLogPathEnvKey) + "\n")
+}
+
+func findBuildSetting(options []string, key string) string {
+	for _, option := range options {
+		split := strings.Split(option, "=")
+		if len(split) < 2 {
+			continue
+		}
+		k := split[0]
+		v := strings.Join(split[1:], "=")
+
+		if k == key {
+			return v
+		}
+	}
+
+	return ""
 }

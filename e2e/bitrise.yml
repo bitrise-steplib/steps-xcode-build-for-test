@@ -194,10 +194,10 @@ workflows:
         - content: |-
             #!/bin/env bash
             set -e
-            
+
             base="$(basename -- $BITRISE_XCTESTRUN_FILE_PATH)"
             regex="${BITRISE_SCHEME}_${TEST_PLAN}_.*\.xctestrun"
-            
+
             echo "xctestrun filename: $base"
             echo 'filename pattern: ${BITRISE_SCHEME}_${TEST_PLAN}_.*\.xctestrun'
 
