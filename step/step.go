@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,16 +97,16 @@ type XcodebuildBuilder struct {
 	xcodeproject xcodeproject.XcodeProject
 	pathChecker  v2pathutil.PathChecker
 	pathProvider v2pathutil.PathProvider
-	dirReader    DirReader
+	fileManager  FileManager
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathProvider v2pathutil.PathProvider, dirReader DirReader) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathProvider v2pathutil.PathProvider, fileManager FileManager) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		logger:       logger,
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
 		pathProvider: pathProvider,
-		dirReader:    dirReader,
+		fileManager:  fileManager,
 	}
 }
 
@@ -437,7 +436,7 @@ type testBundle struct {
 func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
 	b.logger.Printf("SYMROOT: %s", opts.SYMRoot)
 
-	entries, err := b.dirReader.ReadDir(opts.SYMRoot)
+	entries, err := b.fileManager.ReadDir(opts.SYMRoot)
 	if err != nil {
 		return testBundle{}, fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}
@@ -510,14 +509,14 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 // - filter them for the build's timeframe (so that only the current step generated outputs are considered)
 // - find the built targets and tests dir based on the configuration and destination inputs
 func (b XcodebuildBuilder) fixTestRoot(xctestrunPth string) error {
-	c, err := ioutil.ReadFile(xctestrunPth)
+	c, err := b.fileManager.ReadFile(xctestrunPth)
 	if err != nil {
 		return err
 	}
 
 	newC := bytes.Replace(c, []byte("/private__TESTROOT__"), []byte("__TESTROOT__"), -1)
 
-	return ioutil.WriteFile(xctestrunPth, newC, 0666)
+	return b.fileManager.WriteFile(xctestrunPth, newC, 0666)
 }
 
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
@@ -539,7 +538,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 	// BITRISE_TEST_BUNDLE_ZIP_PATH
 	testBundleZipPth := filepath.Join(outputDir, "testbundle.zip")
 
-	entries, err := b.dirReader.ReadDir(symroot)
+	entries, err := b.fileManager.ReadDir(symroot)
 	if err != nil {
 		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}

@@ -1,6 +1,8 @@
 package step
 
 import (
+	"io/fs"
+	"io/ioutil"
 	"os"
 
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -8,18 +10,28 @@ import (
 	"github.com/bitrise-io/go-utils/v2/log"
 )
 
-type DirReader interface {
+type FileManager interface {
+	ReadFile(pth string) ([]byte, error)
+	WriteFile(filename string, data []byte, perm fs.FileMode) error
 	ReadDir(name string) ([]os.DirEntry, error)
 }
 
-type dirReader struct {
+type fileManager struct {
 }
 
-func NewDirReader() DirReader {
-	return dirReader{}
+func NewFileManager() FileManager {
+	return fileManager{}
 }
 
-func (r dirReader) ReadDir(name string) ([]os.DirEntry, error) {
+func (m fileManager) ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
+}
+
+func (m fileManager) WriteFile(filename string, data []byte, perm fs.FileMode) error {
+	return ioutil.WriteFile(filename, data, perm)
+}
+
+func (m fileManager) ReadDir(name string) ([]os.DirEntry, error) {
 	return os.ReadDir(name)
 }
 

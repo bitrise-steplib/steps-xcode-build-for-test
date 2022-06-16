@@ -22,9 +22,11 @@ func Test_GivenIosProjectProducesOneXctestrun_WhenFindTestBundle_ThenReturnsTest
 	stepMocks.logger.On("Printf", mock.Anything, mock.Anything).Return()
 	stepMocks.logger.On("Donef", mock.Anything, mock.Anything).Return()
 	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
-	stepMocks.dirReader.On("ReadDir", mock.Anything).Return([]os.DirEntry{
+	stepMocks.fileManager.On("ReadDir", mock.Anything).Return([]os.DirEntry{
 		createDirEntry("BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun"),
 	}, nil)
+	stepMocks.fileManager.On("ReadFile", mock.Anything).Return([]byte{}, nil)
+	stepMocks.fileManager.On("WriteFile", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// When
 	bundle, err := step.findTestBundle(findTestBundleOpts{
@@ -52,11 +54,13 @@ func Test_GivenIosProjectProducesMultipleXctestrun_WhenFindTestBundle_ThenReturn
 	stepMocks.logger.On("Donef", mock.Anything, mock.Anything).Return()
 	stepMocks.logger.On("Donef", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 	stepMocks.pathChecker.On("IsPathExists", mock.Anything).Return(true, nil)
-	stepMocks.dirReader.On("ReadDir", mock.Anything).Return([]os.DirEntry{
+	stepMocks.fileManager.On("ReadDir", mock.Anything).Return([]os.DirEntry{
 		createDirEntry("BullsEye_UnitTests_iphonesimulator15.5-arm64.xctestrun"),
 		createDirEntry("BullsEye_UITests_iphonesimulator15.5-arm64.xctestrun"),
 		createDirEntry("BullsEye_FullTests_iphonesimulator15.5-arm64.xctestrun"),
 	}, nil)
+	stepMocks.fileManager.On("ReadFile", mock.Anything).Return([]byte{}, nil)
+	stepMocks.fileManager.On("WriteFile", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	stepMocks.xcodeproject.On("Scheme", project, scheme).Return(&xcscheme.Scheme{
 		TestAction: xcscheme.TestAction{
 			TestPlans: &xcscheme.TestPlans{
@@ -92,7 +96,7 @@ type testingMocks struct {
 	xcodeproject *mocks.XcodeProject
 	pathChecker  *mocks.PathChecker
 	pathProvider *mocks.PathProvider
-	dirReader    *mocks.DirReader
+	fileManager  *mocks.FileManager
 }
 
 func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
@@ -100,16 +104,16 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 	xcodeproject := new(mocks.XcodeProject)
 	pathChecker := new(mocks.PathChecker)
 	pathProvider := new(mocks.PathProvider)
-	dirReader := new(mocks.DirReader)
+	fileManager := new(mocks.FileManager)
 
-	step := NewXcodebuildBuilder(logger, xcodeproject, pathChecker, pathProvider, dirReader)
+	step := NewXcodebuildBuilder(logger, xcodeproject, pathChecker, pathProvider, fileManager)
 
 	mocks := testingMocks{
 		logger:       logger,
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
 		pathProvider: pathProvider,
-		dirReader:    dirReader,
+		fileManager:  fileManager,
 	}
 
 	return step, mocks
