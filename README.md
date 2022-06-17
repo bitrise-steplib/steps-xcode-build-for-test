@@ -66,6 +66,7 @@ You can also run this step directly with [Bitrise CLI](https://github.com/bitris
 | `scheme` | Xcode Scheme name.  The input value sets xcodebuild's `-scheme` option. | required | `$BITRISE_SCHEME` |
 | `configuration` | Xcode Build Configuration.  If not specified, the default Build Configuration will be used.  The input value sets xcodebuild's `-configuration` option. | required | `Debug` |
 | `destination` | Destination specifier describes the device to use as a destination.  The input value sets xcodebuild's `-destination` option. | required | `generic/platform=iOS` |
+| `test_plan` | Build tests for a specific Test Plan associated with the Scheme.  Leave this input empty to build all the Test Plans or Test Targets associated with the Scheme.  The input value sets xcodebuild's `-testPlan` option. |  |  |
 | `xcconfig_content` | Build settings to override the project's build settings, using xcodebuild's `-xcconfig` option.  You can't define `-xcconfig` option in `Additional options for the xcodebuild command` if this input is set.  If empty, no setting is changed. When set it can be either: 1.  Existing `.xcconfig` file path.      Example:      `./ios-sample/ios-sample/Configurations/Dev.xcconfig`  2.  The contents of a newly created temporary `.xcconfig` file. (This is the default.)      Build settings must be separated by newline character (`\n`).      Example:     ```     COMPILER_INDEX_STORE_ENABLE = NO     ONLY_ACTIVE_ARCH[config=Debug][sdk=*][arch=*] = YES     ``` |  | `COMPILER_INDEX_STORE_ENABLE = NO` |
 | `xcodebuild_options` | Additional options to be added to the executed xcodebuild command.  Prefer using `Build settings (xcconfig)` input for specifying `-xcconfig` option. You can't use both. |  |  |
 | `log_formatter` | Defines how xcodebuild command's log is formatted.  Available options: - `xcpretty`: The xcodebuild command’s output will be prettified by xcpretty. - `xcodebuild`: Only the last 20 lines of raw xcodebuild output will be visible in the build log.  The raw xcodebuild log will be exported in both cases. | required | `xcpretty` |
@@ -87,10 +88,10 @@ You can also run this step directly with [Bitrise CLI](https://github.com/bitris
 
 | Environment Variable | Description |
 | --- | --- |
-| `BITRISE_TEST_DIR_PATH` | Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`) |
-| `BITRISE_XCTESTRUN_FILE_PATH` | Path to the built xctestrun file (example: `PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`) |
-| `BITRISE_TEST_BUNDLE_ZIP_PATH` | The built test directory and the built xctestrun file compressed as a single zip |
-| `BITRISE_XCODE_RAW_RESULT_TEXT_PATH` | The file path of the raw `xcodebuild build-for-testing` command log. |
+| `BITRISE_TEST_BUNDLE_PATH` | Directory of the built targets' binaries and built associated tests. |
+| `BITRISE_TEST_BUNDLE_ZIP_PATH` | Zipped directory of the built targets' binaries and built associated tests. |
+| `BITRISE_XCTESTRUN_FILE_PATH` | File path of the built xctestrun file (example: `$SYMROOT/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`).  If `Test Plan` Step Input is set BITRISE_XCTESTRUN_FILE_PATH points to the provided Test Plan's xctestrun file. Otherwise points to the scheme's default Test Plan's xctestrun file (or to the first xctestrun without default Test Plan). |
+| `BITRISE_XCODE_RAW_RESULT_TEXT_PATH` | File path of the raw `xcodebuild build-for-testing` command log. |
 </details>
 
 ## 🙋 Contributing

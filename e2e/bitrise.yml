@@ -39,6 +39,7 @@ workflows:
     - SAMPLE_APP_BRANCH: codesign-update
     - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
     - BITRISE_SCHEME: sample swiftpm
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -53,6 +54,7 @@ workflows:
     - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
     - BITRISE_SCHEME: sample-apps-fastlane-test
     - BITRISE_CONFIGURATION: Debug
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -66,6 +68,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: "off"
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -80,6 +83,7 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: sample-apps-fastlane-test.xcodeproj
     - BITRISE_SCHEME: sample-apps-fastlane-test
+    - DESTINATION: generic/platform=iOS
     - BITRISE_CONFIGURATION: Debug
     - CODE_SIGNING_METHOD: apple-id
     - TEAM_ID: 72SA8V3WYL
@@ -94,6 +98,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -106,6 +111,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -118,6 +124,7 @@ workflows:
     - SAMPLE_APP_BRANCH: renamed-scheme
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -131,6 +138,7 @@ workflows:
     - SAMPLE_APP_BRANCH: automatic-signing
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: Scheme with spaces
+    - DESTINATION: generic/platform=iOS
     - XCODE_BUILD_OPTIONS: -derivedDataPath $BITRISE_SOURCE_DIR/_tmp/ddata -destination generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
@@ -144,12 +152,62 @@ workflows:
     - SAMPLE_APP_BRANCH: bundle_id
     - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
     - BITRISE_SCHEME: ios-simple-objc
+    - DESTINATION: generic/platform=iOS
     - CODE_SIGNING_METHOD: api-key
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
     - CERTIFICATE_PASSPHRASE_LIST: ""
     after_run:
     - _run
+
+  test_test_plan_enabled_project:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
+    - BITRISE_SCHEME: BullsEye
+    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - CODE_SIGNING_METHOD: "off"
+    before_run:
+    - _run
+    after_run:
+    - _run_test_without_building
+
+  test_test_plan_enabled_project_test_plan_specified:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
+    - SAMPLE_APP_BRANCH: master
+    - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
+    - BITRISE_SCHEME: BullsEye
+    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - CODE_SIGNING_METHOD: "off"
+    - TEST_PLAN: UnitTests
+    before_run:
+    - _run
+    steps:
+    - script:
+        title: Check xctestrun filename
+        description: |-
+          This Step checks if the generated xctestrun filename matches the last known pattern or not.
+          If not, `Step.findTestBundle`'s default xctestrun search needs to be updated.
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -e
+
+            base="$(basename -- $BITRISE_XCTESTRUN_FILE_PATH)"
+            regex="${BITRISE_SCHEME}_${TEST_PLAN}_.*\.xctestrun"
+
+            echo "xctestrun filename: $base"
+            echo 'filename pattern: ${BITRISE_SCHEME}_${TEST_PLAN}_.*\.xctestrun'
+
+            if [[ ! $base =~ $regex ]] ; then
+              echo "xctestrun filename doesn't match"
+              exit 1
+            fi
+            echo "xctestrun filename matches"
+    after_run:
+    - _run_test_without_building
 
   _run:
     steps:
@@ -171,8 +229,10 @@ workflows:
         inputs:
         - project_path: ./_tmp/$BITRISE_PROJECT_PATH
         - scheme: $BITRISE_SCHEME
-        - output_tool: xcodebuild
+        - destination: $DESTINATION
+        - test_plan: $TEST_PLAN
         - xcodebuild_options: $XCODE_BUILD_OPTIONS
+        - output_tool: xcodebuild
         - automatic_code_signing: $CODE_SIGNING_METHOD
         - certificate_url_list: $CERTIFICATE_URL_LIST
         - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
@@ -181,37 +241,27 @@ workflows:
         is_always_run: true
         inputs:
         - envs:
-        - files:
+        - files: |-
+            BITRISE_XCTESTRUN_FILE_PATH
         - dirs: |-
-            BITRISE_TEST_DIR_PATH
+            BITRISE_TEST_BUNDLE_PATH
         - deploy_dir: $BITRISE_DEPLOY_DIR
         - deployed_files: |-
             BITRISE_TEST_BUNDLE_ZIP_PATH
-            BITRISE_XCTESTRUN_FILE_PATH
         - deployed_dirs:
-    - script:
-        title: Output check
-        is_always_run: true
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ "$BITRISE_DEPLOY_DIR/testbundle.zip" != "$BITRISE_TEST_BUNDLE_ZIP_PATH" ]] ; then
-              echo "BITRISE_TEST_BUNDLE_ZIP_PATH (\"$BITRISE_TEST_BUNDLE_ZIP_PATH\") should be: \"$BITRISE_DEPLOY_DIR/testbundle.zip\""
-              exit 1
-            fi
-            if [[ "$BITRISE_DEPLOY_DIR/Debug-iphoneos" != "$BITRISE_TEST_DIR_PATH" ]] ; then
-              echo "BITRISE_TEST_DIR_PATH (\"$BITRISE_TEST_DIR_PATH\") should be: \"$BITRISE_DEPLOY_DIR/Debug-iphoneos\""
-              exit 1
-            fi
-            if [[ "$BITRISE_XCTESTRUN_FILE_PATH" =~ "$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos[0-9]{2}.[0-9]{1,2}-arm64e.xctestrun" ]] ; then
-              echo "BITRISE_XCTESTRUN_FILE_PATH (\"$BITRISE_XCTESTRUN_FILE_PATH\") should be: \"$BITRISE_DEPLOY_DIR/${BITRISE_SCHEME}_iphoneos{{sdk-version}}-arm64e.xctestrun\""
-              exit 1
-            fi
 
   _run_device_tests:
     steps:
-    - virtual-device-testing-for-ios: { }
+    - virtual-device-testing-for-ios:
+        inputs:
+        - test_devices: iphone13pro,15.2,en,portrait
+
+  _run_test_without_building:
+    steps:
+    - git::https://github.com/bitrise-steplib/bitrise-step-xcode-test-without-building.git@step-init:
+        inputs:
+        - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
+        - destination: $DESTINATION
 
   _expose_xcode_version:
     steps:

@@ -105,6 +105,17 @@ inputs:
       The input value sets xcodebuild's `-destination` option.
     is_required: true
 
+- test_plan:
+  opts:
+    title: Test Plan
+    summary: Build tests for a specific Test Plan associated with the Scheme.
+    description: |-
+      Build tests for a specific Test Plan associated with the Scheme.
+
+      Leave this input empty to build all the Test Plans or Test Targets associated with the Scheme.
+
+      The input value sets xcodebuild's `-testPlan` option.
+
 # xcodebuild configuration
 
 - xcconfig_content: COMPILER_INDEX_STORE_ENABLE = NO
@@ -304,19 +315,27 @@ inputs:
     is_required: true
 
 outputs:
-- BITRISE_TEST_DIR_PATH:
+- BITRISE_TEST_BUNDLE_PATH:
   opts:
-    title: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
-    summary: "Path to the built test directory (example: `PROJECT_DERIVED_DATA/Build/Products/Debug-iphoneos`)"
-- BITRISE_XCTESTRUN_FILE_PATH:
-  opts:
-    title: "Path to the built xctestrun file (example: `PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`)"
-    summary: "Path to the built xctestrun file (example: `PROJECT_DERIVED_DATA/Build/Products/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`)"
+    title: Test Bundle directory
+    summary: Directory of the built targets' binaries and built associated tests.
+
 - BITRISE_TEST_BUNDLE_ZIP_PATH:
   opts:
-    title: The built test directory and the built xctestrun file compressed as a single zip
-    summary: The built test directory and the built xctestrun file compressed as a single zip
+    title: Zipped Test Bundle directory
+    summary: Zipped directory of the built targets' binaries and built associated tests.
+
+- BITRISE_XCTESTRUN_FILE_PATH:
+  opts:
+    title: xctestrun file path
+    summary: File path of the built xctestrun file.
+    description: |-
+      File path of the built xctestrun file (example: `$SYMROOT/ios-simple-objc_iphoneos12.0-arm64e.xctestrun`).
+
+      If `Test Plan` Step Input is set BITRISE_XCTESTRUN_FILE_PATH points to the provided Test Plan's xctestrun file.
+      Otherwise points to the scheme's default Test Plan's xctestrun file (or to the first xctestrun without default Test Plan).
+
 - BITRISE_XCODE_RAW_RESULT_TEXT_PATH:
   opts:
     title: "`xcodebuild build-for-testing` command log file path"
-    summary: The file path of the raw `xcodebuild build-for-testing` command log.
+    summary: File path of the raw `xcodebuild build-for-testing` command log.

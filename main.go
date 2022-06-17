@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
+	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
 )
 
 func main() {
@@ -49,5 +51,10 @@ func run() int {
 }
 
 func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
-	return step.NewXcodebuildBuilder(logger)
+	xcproject := xcodeproject.NewXcodeProject()
+	pathChecker := pathutil.NewPathChecker()
+	pathProvider := pathutil.NewPathProvider()
+	fileManager := step.NewFileManager()
+
+	return step.NewXcodebuildBuilder(logger, xcproject, pathChecker, pathProvider, fileManager)
 }
