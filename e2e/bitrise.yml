@@ -258,7 +258,7 @@ workflows:
 
   _run_test_without_building:
     steps:
-    - git::https://github.com/bitrise-steplib/bitrise-step-xcode-test-without-building.git@step-init:
+    - xcode-test-without-building:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION
