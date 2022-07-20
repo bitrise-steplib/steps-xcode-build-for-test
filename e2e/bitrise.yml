@@ -111,7 +111,6 @@ workflows:
     - API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
     after_run:
     - _run
-    - _run_device_tests
 
   test_build_output_renamed:
     envs:
