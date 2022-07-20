@@ -13,7 +13,7 @@ require (
 require (
 	github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.2
 	github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.7
-	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.18
+	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.19.0.20220718131413-7d55426de266
 	github.com/stretchr/testify v1.7.2
 )
 

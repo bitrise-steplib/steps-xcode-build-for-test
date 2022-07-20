@@ -33,6 +33,9 @@ type CodesignManagerOpts struct {
 	BuildURL                  string
 	BuildAPIToken             stepconf.Secret
 	VerboseLog                bool
+	APIKeyPath                stepconf.Secret
+	APIKeyID                  string
+	APIKeyIssuerID            string
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
@@ -69,7 +72,13 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		}
 	}
 
-	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, logger)
+	overrideInputs := codesign.ConnectionOverrideInputs{
+		APIKeyPath:     managerOpts.APIKeyPath,
+		APIKeyID:       managerOpts.APIKeyID,
+		APIKeyIssuerID: managerOpts.APIKeyIssuerID,
+	}
+
+	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, overrideInputs, logger)
 	if err != nil {
 		return codesign.Manager{}, err
 	}
@@ -99,7 +108,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
-		serviceConnection,
+		serviceConnection.TestDevices,
 		devPortalClientFactory,
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, client),
 		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, client),
