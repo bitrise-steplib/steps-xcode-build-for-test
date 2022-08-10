@@ -33,6 +33,9 @@ type CodesignManagerOpts struct {
 	BuildURL                  string
 	BuildAPIToken             stepconf.Secret
 	VerboseLog                bool
+	APIKeyPath                stepconf.Secret
+	APIKeyID                  string
+	APIKeyIssuerID            string
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
@@ -61,15 +64,22 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		return codesign.Manager{}, fmt.Errorf("issue with input: %w", err)
 	}
 
-	var serviceConnection *devportalservice.AppleDeveloperConnection
 	devPortalClientFactory := devportalclient.NewFactory(logger)
-	if authType == codesign.APIKeyAuth || authType == codesign.AppleIDAuth {
+
+	var serviceConnection *devportalservice.AppleDeveloperConnection
+	if managerOpts.BuildURL != "" && managerOpts.BuildAPIToken != "" {
 		if serviceConnection, err = devPortalClientFactory.CreateBitriseConnection(managerOpts.BuildURL, string(managerOpts.BuildAPIToken)); err != nil {
 			return codesign.Manager{}, err
 		}
 	}
 
-	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, logger)
+	overrideInputs := codesign.ConnectionOverrideInputs{
+		APIKeyPath:     managerOpts.APIKeyPath,
+		APIKeyID:       managerOpts.APIKeyID,
+		APIKeyIssuerID: managerOpts.APIKeyIssuerID,
+	}
+
+	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, overrideInputs, logger)
 	if err != nil {
 		return codesign.Manager{}, err
 	}
@@ -96,10 +106,14 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	}
 
 	client := retry.NewHTTPClient().StandardClient()
+	var testDevices []devportalservice.TestDevice
+	if serviceConnection != nil {
+		testDevices = serviceConnection.TestDevices
+	}
 	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
-		serviceConnection,
+		testDevices,
 		devPortalClientFactory,
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, client),
 		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, client),
