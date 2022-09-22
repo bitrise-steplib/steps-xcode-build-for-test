@@ -289,7 +289,7 @@ workflows:
     steps:
     - virtual-device-testing-for-ios:
         inputs:
-        - test_devices: iphone8,12.4,en,portrait
+        - test_devices: iphone8,14.7,en,portrait
 
   _run_test_without_building:
     steps:
