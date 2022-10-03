@@ -99,6 +99,10 @@ inputs:
     summary: Destination specifier describes the device to use as a destination.
     description: |-
       Destination specifier describes the device to use as a destination.
+      
+      Recommended values:
+      - `generic/platform=iOS` to build tests for physical devices
+      - `generic/platform=iOS Simulator` to build tests for Simulators
 
       The input value sets xcodebuild's `-destination` option.
     is_required: true
