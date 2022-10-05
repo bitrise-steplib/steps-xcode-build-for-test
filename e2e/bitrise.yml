@@ -50,7 +50,7 @@ workflows:
     after_run:
     - _run
 
-  test_uitest_api_key_signing:
+  manual_test_uitest_api_key_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
