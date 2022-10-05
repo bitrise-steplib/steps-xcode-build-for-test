@@ -198,7 +198,7 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
     - BITRISE_SCHEME: BullsEye
-    - DESTINATION: platform=iOS Simulator
+    - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     before_run:
@@ -212,7 +212,7 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
     - BITRISE_SCHEME: BullsEye
-    - DESTINATION: platform=iOS Simulator
+    - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
