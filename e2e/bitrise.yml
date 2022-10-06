@@ -50,7 +50,7 @@ workflows:
     after_run:
     - _run
 
-  test_uitest_api_key_signing:
+  manual_test_uitest_api_key_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
@@ -198,7 +198,8 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
     - BITRISE_SCHEME: BullsEye
-    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - DESTINATION: generic/platform=iOS Simulator
+    - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     before_run:
     - _run
@@ -211,7 +212,8 @@ workflows:
     - SAMPLE_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: ./BullsEye.xcworkspace
     - BITRISE_SCHEME: BullsEye
-    - DESTINATION: platform=iOS Simulator,name=iPhone 12 Pro Max
+    - DESTINATION: generic/platform=iOS Simulator
+    - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
     before_run:
@@ -296,7 +298,7 @@ workflows:
     - xcode-test-without-building:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
-        - destination: $DESTINATION
+        - destination: $DESTINATION_RUN_TEST
 
   _expose_xcode_version:
     steps:
