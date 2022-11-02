@@ -559,7 +559,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 	//	+ Debug-watchsimulator/
 	for _, builtTestsDir := range entries {
 		if builtTestsDir.IsDir() {
-			args = append(args, builtTestsDir)
+			args = append(args, builtTestsDir.Name())
 		}
 	}
 
