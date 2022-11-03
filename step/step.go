@@ -552,18 +552,17 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}
 
-	var builtTestsDir string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			if builtTestsDir != "" {
-				return fmt.Errorf("multiple built test dir found in build output dir")
-			}
-			builtTestsDir = entry.Name()
+	args := []string{"-r", testBundleZipPth}
+
+	// add all build folders to zip file:
+	//	+ Debug-iphonesimulator/
+	//	+ Debug-watchsimulator/
+	for _, builtTestsDir := range entries {
+		if builtTestsDir.IsDir() {
+			args = append(args, builtTestsDir.Name())
 		}
 	}
 
-	args := []string{"-r", testBundleZipPth}
-	args = append(args, builtTestsDir)
 	for _, xctestrunPth := range xctestrunPths {
 		args = append(args, filepath.Base(xctestrunPth))
 	}
