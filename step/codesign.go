@@ -2,6 +2,7 @@ package step
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/retry"
@@ -24,6 +25,7 @@ type CodesignManagerOpts struct {
 	Configuration             string
 	CodeSigningAuthSource     string
 	RegisterTestDevices       bool
+	TestDeviceListPath        string
 	MinDaysProfileValid       int
 	TeamID                    string
 	CertificateURLList        string
@@ -106,10 +108,17 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	}
 
 	client := retry.NewHTTPClient().StandardClient()
+
 	var testDevices []devportalservice.TestDevice
-	if serviceConnection != nil {
+	if managerOpts.TestDeviceListPath != "" {
+		testDevices, err = devportalservice.ParseTestDevicesFromFile(managerOpts.TestDeviceListPath, time.Now())
+		if err != nil {
+			logger.Warnf("Failed to process device list (%s): %s", managerOpts.TestDeviceListPath, err)
+		}
+	} else if serviceConnection != nil {
 		testDevices = serviceConnection.TestDevices
 	}
+
 	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
