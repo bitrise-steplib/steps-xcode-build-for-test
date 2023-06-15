@@ -60,6 +60,7 @@ type Input struct {
 	// Automatic code signing
 	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
 	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
+	TestDeviceListPath        string          `env:"test_device_list_path"`
 	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
 	TeamID                    string          `env:"apple_team_id"`
 	CertificateURLList        string          `env:"certificate_url_list"`
@@ -185,6 +186,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 			Configuration:             input.Configuration,
 			CodeSigningAuthSource:     input.CodeSigningAuthSource,
 			RegisterTestDevices:       input.RegisterTestDevices,
+			TestDeviceListPath:        input.TestDeviceListPath,
 			MinDaysProfileValid:       input.MinDaysProfileValid,
 			TeamID:                    input.TeamID,
 			CertificateURLList:        input.CertificateURLList,
