@@ -201,9 +201,12 @@ workflows:
     - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
-    - XCODEBUILD_OPTIONS: -parallel-testing-enabled NO
     before_run:
     - _run
+    steps:
+    - script:
+        inputs:
+        - content: env
     after_run:
     - _run_test_without_building
 
@@ -217,7 +220,6 @@ workflows:
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
-    - XCODEBUILD_OPTIONS: -parallel-testing-enabled NO
     before_run:
     - _run
     steps:
