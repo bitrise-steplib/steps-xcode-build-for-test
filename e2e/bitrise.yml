@@ -201,6 +201,7 @@ workflows:
     - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
+    - XCODEBUILD_OPTIONS: "-parallel-testing-enabled NO"
     before_run:
     - _run
     after_run:
@@ -216,6 +217,7 @@ workflows:
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
+    - XCODEBUILD_OPTIONS: "-parallel-testing-enabled NO"
     before_run:
     - _run
     steps:
@@ -299,6 +301,7 @@ workflows:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION_RUN_TEST
+        - xcodebuild_options: $XCODEBUILD_OPTIONS
 
   _expose_xcode_version:
     steps:
