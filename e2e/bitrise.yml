@@ -299,7 +299,6 @@ workflows:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION_RUN_TEST
-        - xcodebuild_options: $XCODEBUILD_OPTIONS
 
   _expose_xcode_version:
     steps:
