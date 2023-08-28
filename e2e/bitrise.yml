@@ -195,7 +195,7 @@ workflows:
   test_test_plan_enabled_project:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-14.3.x-edge\"}}"
+        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
@@ -219,7 +219,7 @@ workflows:
   test_test_plan_enabled_project_test_plan_specified:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-14.3.x-edge\"}}"
+        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
