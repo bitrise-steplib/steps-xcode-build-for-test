@@ -193,6 +193,16 @@ workflows:
     - _run
 
   test_test_plan_enabled_project:
+    steps:
+    - script:
+        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -x # Do not set -e as bitrise command is expected to fail
+            bitrise run --config=./e2e/bitrise.yml utility_test_test_plan_enabled_project
+
+  utility_test_test_plan_enabled_project:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
     - SAMPLE_APP_BRANCH: master
@@ -207,6 +217,16 @@ workflows:
     - _run_test_without_building
 
   test_test_plan_enabled_project_test_plan_specified:
+    steps:
+    - script:
+        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -x # Do not set -e as bitrise command is expected to fail
+            bitrise run --config=./e2e/bitrise.yml utility_test_test_plan_enabled_project_test_plan_specified
+
+  utility_test_test_plan_enabled_project_test_plan_specified:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-swift-project-with-parallel-ui-test.git
     - SAMPLE_APP_BRANCH: master

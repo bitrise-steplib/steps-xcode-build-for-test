@@ -2,7 +2,6 @@ package step
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -25,11 +24,11 @@ func NewFileManager() FileManager {
 }
 
 func (m fileManager) ReadFile(filename string) ([]byte, error) {
-	return ioutil.ReadFile(filename)
+	return os.ReadFile(filename)
 }
 
 func (m fileManager) WriteFile(filename string, data []byte, perm fs.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
+	return os.WriteFile(filename, data, perm)
 }
 
 func (m fileManager) ReadDir(name string) ([]os.DirEntry, error) {
