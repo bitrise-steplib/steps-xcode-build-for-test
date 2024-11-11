@@ -39,6 +39,7 @@ type CodesignManagerOpts struct {
 	APIKeyPath                stepconf.Secret
 	APIKeyID                  string
 	APIKeyIssuerID            string
+	APIKeyEnterpriseAccount   bool
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager) (codesign.Manager, error) {
@@ -77,9 +78,10 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	}
 
 	overrideInputs := codesign.ConnectionOverrideInputs{
-		APIKeyPath:     managerOpts.APIKeyPath,
-		APIKeyID:       managerOpts.APIKeyID,
-		APIKeyIssuerID: managerOpts.APIKeyIssuerID,
+		APIKeyPath:              managerOpts.APIKeyPath,
+		APIKeyID:                managerOpts.APIKeyID,
+		APIKeyIssuerID:          managerOpts.APIKeyIssuerID,
+		APIKeyEnterpriseAccount: managerOpts.APIKeyEnterpriseAccount,
 	}
 
 	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, overrideInputs, logger)
