@@ -179,6 +179,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		factory := v2command.NewFactory(env.NewRepository())
+		fileManager := fileutil.NewFileManager()
 
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
 			ProjectPath:               absProjectPath,
@@ -199,7 +200,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 			APIKeyPath:                input.APIKeyPath,
 			APIKeyID:                  input.APIKeyID,
 			APIKeyIssuerID:            input.APIKeyIssuerID,
-		}, xcodebuildVersion.MajorVersion, b.logger, factory)
+		}, xcodebuildVersion.MajorVersion, b.logger, factory, fileManager)
 		if err != nil {
 			return Config{}, err
 		}
