@@ -15,20 +15,6 @@ app:
   - BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
 
 workflows:
-  test_swiftpm:
-    envs:
-    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
-    - SAMPLE_APP_BRANCH: codesign-update
-    - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
-    - BITRISE_SCHEME: sample swiftpm
-    - DESTINATION: generic/platform=iOS
-    - CODE_SIGNING_METHOD: api-key
-    - TEAM_ID: 72SA8V3WYL
-    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
-    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
-
   manual_test_uitest_api_key_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
