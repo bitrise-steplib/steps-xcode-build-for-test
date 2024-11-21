@@ -74,9 +74,10 @@ type Input struct {
 	// Caching
 	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
 	// App Store Connect connection override
-	APIKeyPath     stepconf.Secret `env:"api_key_path"`
-	APIKeyID       string          `env:"api_key_id"`
-	APIKeyIssuerID string          `env:"api_key_issuer_id"`
+	APIKeyPath              stepconf.Secret `env:"api_key_path"`
+	APIKeyID                string          `env:"api_key_id"`
+	APIKeyIssuerID          string          `env:"api_key_issuer_id"`
+	APIKeyEnterpriseAccount bool            `env:"api_key_enterprise_account,opt[yes,no]"`
 	// Debugging
 	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
 }
@@ -179,6 +180,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		factory := v2command.NewFactory(env.NewRepository())
+		fileManager := fileutil.NewFileManager()
 
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
 			ProjectPath:               absProjectPath,
@@ -199,7 +201,8 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 			APIKeyPath:                input.APIKeyPath,
 			APIKeyID:                  input.APIKeyID,
 			APIKeyIssuerID:            input.APIKeyIssuerID,
-		}, xcodebuildVersion.MajorVersion, b.logger, factory)
+			APIKeyEnterpriseAccount:   input.APIKeyEnterpriseAccount,
+		}, xcodebuildVersion.MajorVersion, b.logger, factory, fileManager)
 		if err != nil {
 			return Config{}, err
 		}

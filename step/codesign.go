@@ -7,8 +7,8 @@ import (
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
-	"github.com/bitrise-io/go-xcode/devportalservice"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/certdownloader"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/codesignasset"
@@ -17,6 +17,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/profiledownloader"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
+	"github.com/bitrise-io/go-xcode/v2/devportalservice"
 )
 
 type CodesignManagerOpts struct {
@@ -38,9 +39,10 @@ type CodesignManagerOpts struct {
 	APIKeyPath                stepconf.Secret
 	APIKeyID                  string
 	APIKeyIssuerID            string
+	APIKeyEnterpriseAccount   bool
 }
 
-func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory) (codesign.Manager, error) {
+func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager) (codesign.Manager, error) {
 	var authType codesign.AuthType
 	switch managerOpts.CodeSigningAuthSource {
 	case codeSignSourceAppleID:
@@ -66,7 +68,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		return codesign.Manager{}, fmt.Errorf("issue with input: %w", err)
 	}
 
-	devPortalClientFactory := devportalclient.NewFactory(logger)
+	devPortalClientFactory := devportalclient.NewFactory(logger, fileManager)
 
 	var serviceConnection *devportalservice.AppleDeveloperConnection
 	if managerOpts.BuildURL != "" && managerOpts.BuildAPIToken != "" {
@@ -76,9 +78,10 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	}
 
 	overrideInputs := codesign.ConnectionOverrideInputs{
-		APIKeyPath:     managerOpts.APIKeyPath,
-		APIKeyID:       managerOpts.APIKeyID,
-		APIKeyIssuerID: managerOpts.APIKeyIssuerID,
+		APIKeyPath:              managerOpts.APIKeyPath,
+		APIKeyID:                managerOpts.APIKeyID,
+		APIKeyIssuerID:          managerOpts.APIKeyIssuerID,
+		APIKeyEnterpriseAccount: managerOpts.APIKeyEnterpriseAccount,
 	}
 
 	appleAuthCredentials, err := codesign.SelectConnectionCredentials(authType, serviceConnection, overrideInputs, logger)
