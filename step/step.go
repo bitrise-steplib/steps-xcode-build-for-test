@@ -440,13 +440,14 @@ type testBundle struct {
 // ├── BullsEye_UITests_iphonesimulator15.5-arm64.xctestrun
 // ├── BullsEye_UnitTests_iphonesimulator15.5-arm64.xctestrun
 // └── Debug-iphonesimulator
-//     ├── BullsEye.app
-//     ├── BullsEye.swiftmodule
-//     ├── BullsEyeFailingTests.swiftmodule
-//     ├── BullsEyeSlowTests.swiftmodule
-//     ├── BullsEyeTests.swiftmodule
-//     ├── BullsEyeUITests-Runner.app
-//     └── BullsEyeUITests.swiftmodule
+//
+//	├── BullsEye.app
+//	├── BullsEye.swiftmodule
+//	├── BullsEyeFailingTests.swiftmodule
+//	├── BullsEyeSlowTests.swiftmodule
+//	├── BullsEyeTests.swiftmodule
+//	├── BullsEyeUITests-Runner.app
+//	└── BullsEyeUITests.swiftmodule
 func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, error) {
 	b.logger.Printf("SYMROOT: %s", opts.SYMRoot)
 
@@ -557,7 +558,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}
 
-	args := []string{"-r", testBundleZipPth}
+	args := []string{"-r -1", testBundleZipPth}
 
 	// add all build folders to zip file:
 	//	+ Debug-iphonesimulator/
