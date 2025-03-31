@@ -294,7 +294,7 @@ workflows:
         - api_key_path: $API_KEY_PATH
         - api_key_id: $API_KEY_ID
         - api_key_issuer_id: $API_KEY_ISSUER_ID
-        - verbose_log: "true"
+        - verbose_log: "yes"
     - git::https://github.com/bitrise-steplib/bitrise-step-check-step-outputs.git@main:
         is_always_run: true
         inputs:
