@@ -79,7 +79,8 @@ type Input struct {
 	APIKeyIssuerID          string          `env:"api_key_issuer_id"`
 	APIKeyEnterpriseAccount bool            `env:"api_key_enterprise_account,opt[yes,no]"`
 	// Debugging
-	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
+	VerboseLog       bool `env:"verbose_log,opt[yes,no]"`
+	CompressionLevel int  `env:"compression_level,range[0..9]"`
 }
 
 type Config struct {
@@ -93,6 +94,7 @@ type Config struct {
 	XCPretty               bool
 	CodesignManager        *codesign.Manager
 	OutputDir              string
+	CompressionLevel       int
 	XcodebuildMajorVersion int
 	CacheLevel             string
 	SwiftPackagesPath      string
@@ -220,6 +222,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		XCPretty:               input.LogFormatter == "xcpretty",
 		CodesignManager:        codesignManager,
 		OutputDir:              absOutputDir,
+		CompressionLevel:       input.CompressionLevel,
 		XcodebuildMajorVersion: int(xcodebuildVersion.MajorVersion),
 		CacheLevel:             input.CacheLevel,
 		SwiftPackagesPath:      swiftPackagesPath,
@@ -362,7 +365,8 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 
 type ExportOpts struct {
 	RunOut
-	OutputDir string
+	OutputDir        string
+	CompressionLevel int
 }
 
 func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
@@ -379,7 +383,7 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 		return nil
 	}
 
-	if err := b.exportTestBundle(opts.OutputDir, opts.SYMRoot, opts.XctestrunPths, opts.DefaultXctestrunPth); err != nil {
+	if err := b.exportTestBundle(opts.OutputDir, opts.CompressionLevel, opts.SYMRoot, opts.XctestrunPths, opts.DefaultXctestrunPth); err != nil {
 		b.logger.Warnf("%s", err)
 	}
 
@@ -543,7 +547,7 @@ func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) 
 	return nil
 }
 
-func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrunPths []string, defaultXctestrunPth string) error {
+func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel int, symroot string, xctestrunPths []string, defaultXctestrunPth string) error {
 	// BITRISE_TEST_BUNDLE_PATH
 	if err := tools.ExportEnvironmentWithEnvman(testBundlePathEnvKey, symroot); err != nil {
 		return err
@@ -558,7 +562,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 		return fmt.Errorf("failed to list SYMROOT entries: %w", err)
 	}
 
-	args := []string{"-r -1", testBundleZipPth}
+	args := []string{"-r", fmt.Sprintf("-%d", compressionLevel), testBundleZipPth}
 
 	// add all build folders to zip file:
 	//	+ Debug-iphonesimulator/
@@ -577,6 +581,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir, symroot string, xctestrun
 	zipCmd := factory.Create("zip", args, &v2command.Opts{
 		Dir: symroot,
 	})
+	b.logger.Debugf("$ %s", zipCmd.PrintableCommandArgs())
 	if out, err := zipCmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
 		var exerr *exec.ExitError
 		if errors.As(err, &exerr) {

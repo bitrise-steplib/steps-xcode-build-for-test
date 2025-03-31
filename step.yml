@@ -380,6 +380,19 @@ inputs:
     - "no"
     is_required: true
 
+- compression_level: 3
+  opts:
+    title: Compression level
+    summary: ZIP compression level to control speed / archive size.
+    description: |-
+      ZIP compression level to control speed / archive size.
+
+      Valid values are between 0 and 9. Defaults to 3.
+      - 0: no compression
+      - 1: fastest compression
+      - 9: best compression
+    is_required: false
+
 outputs:
 - BITRISE_TEST_BUNDLE_PATH:
   opts:
