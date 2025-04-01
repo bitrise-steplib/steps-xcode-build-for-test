@@ -40,8 +40,9 @@ func run() int {
 	}
 
 	if err := xcodebuildBuilder.ExportOutputs(step.ExportOpts{
-		OutputDir: cfg.OutputDir,
-		RunOut:    result,
+		OutputDir:        cfg.OutputDir,
+		CompressionLevel: cfg.CompressionLevel,
+		RunOut:           result,
 	}); err != nil {
 		logger.Errorf("Export outputs: %s", err)
 		exitCode = 1
