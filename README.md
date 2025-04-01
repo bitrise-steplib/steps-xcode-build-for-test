@@ -88,7 +88,7 @@ You can also run this step directly with [Bitrise CLI](https://github.com/bitris
 | `api_key_issuer_id` | Private key issuer ID used for App Store Connect authentication. This overrides the Bitrise-managed API connection, only set this input if you want to control the API connection on a step-level. Most of the time it's easier to set up the connection on the App Settings page on Bitrise. This input only takes effect if the other two connection override inputs are set too (`api_key_path`, `api_key_id`). |  |  |
 | `api_key_enterprise_account` | Indicates if the account is an enterprise type. This overrides the Bitrise-managed API connection, only set this input if you know you have an enterprise account. | required | `no` |
 | `verbose_log` | If this input is set, the Step will print additional logs for debugging. | required | `no` |
-| `compression_level` | ZIP compression level to control speed / archive size.  Valid values are between 0 and 9. Defaults to 3. - 0: no compression - 1: fastest compression - 9: best compression |  | `3` |
+| `compression_level` | ZIP compression level to control speed / archive size.  Valid values are between 0 and 9. Defaults to 6. - 0: no compression - 1: fastest compression - 9: best compression |  | `6` |
 </details>
 
 <details>
