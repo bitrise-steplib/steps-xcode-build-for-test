@@ -109,18 +109,8 @@ workflows:
     - API_KEY_PATH: $BITFALL_APPSTORECONNECT_API_KEY_URL
     - API_KEY_ID: $BITFALL_APPSTORECONNECT_API_KEY_ID
     - API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
-    steps:
-    - script:
-        title: Unset Bitrise API connection env vars
-        inputs:
-        - content: |-
-            #!/usr/bin/env bash
-            set -ex
-            envman add --key BITRISE_BUILD_URL_BACKUP --value $BITRISE_BUILD_URL
-            envman add --key BITRISE_BUILD_API_TOKEN_BACKUP --value $BITRISE_BUILD_API_TOKEN
-            envman unset --key BITRISE_BUILD_URL
-            envman unset --key BITRISE_BUILD_API_TOKEN
     after_run:
+    - _unset_and_backup_api_envs
     - _run
     - _restore_api_envs
 
@@ -343,6 +333,19 @@ workflows:
             echo "Xcode major version: $xcode_major_version"
             envman add --key XCODE_MAJOR_VERSION --value $xcode_major_version
 
+  _unset_and_backup_api_envs:
+    steps:
+    - script:
+        title: Backup Bitrise API connection env vars
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -ex
+            envman add --key BITRISE_BUILD_URL_BACKUP --value $BITRISE_BUILD_URL
+            envman add --key BITRISE_BUILD_API_TOKEN_BACKUP --value $BITRISE_BUILD_API_TOKEN
+            envman unset --key BITRISE_BUILD_URL
+            envman unset --key BITRISE_BUILD_API_TOKEN
+
   _restore_api_envs:
     steps:
     - script:
@@ -352,3 +355,20 @@ workflows:
             set -ex
             envman add --key BITRISE_BUILD_URL --value $BITRISE_BUILD_URL_BACKUP
             envman add --key BITRISE_BUILD_API_TOKEN --value $BITRISE_BUILD_API_TOKEN_BACKUP
+
+  _invalid_login:
+    steps:
+    - script:
+        title: Set invalid login
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -ex
+            INVALID_BUILD_URL=./_invalid_authinfo
+            echo '{"key_id": "x", "issuer_id": "x", "private_key": "x"}' > $INVALID_BUILD_URL
+
+            BITRISE_BUILD_URL="file://$INVALID_BUILD_URL"
+            BITRISE_BUILD_API_TOKEN="x"
+
+            envman add --key BITRISE_BUILD_URL --value $BITRISE_BUILD_URL
+            envman add --key BITRISE_BUILD_API_TOKEN --value $BITRISE_BUILD_API_TOKEN
