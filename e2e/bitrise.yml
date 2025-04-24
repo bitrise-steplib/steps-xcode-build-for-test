@@ -81,6 +81,19 @@ workflows:
     - _run
 
   test_uitest_apple_id_signing:
+    description: |-
+       Running Apple ID tests on a single stack to avoid unreliability with parallel logins:
+       > Loading session from environment variable
+       > Session loaded from environment variable is not valid. Continuing with normal login.
+    steps:
+    - bitrise-run:
+        run_if: |-
+          {{ or (enveq "IS_LATEST_STACK_XCODE" "true") (not .IsCI) }}
+        inputs:
+        - workflow_id: utility_test_uitest_apple_id_signing
+        - bitrise_config_path: ./e2e/bitrise.yml
+
+  utility_test_uitest_apple_id_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
