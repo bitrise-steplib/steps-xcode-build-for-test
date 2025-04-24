@@ -59,6 +59,7 @@ workflows:
     - FALLBACK_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
     after_run:
     - _unset_and_backup_api_envs
+    - _invalid_login
     - _run
     - _restore_api_envs
 
