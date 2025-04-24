@@ -10,6 +10,7 @@ app:
   - BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
   - BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
   - BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
+  - BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
   - BITFALL_APPSTORECONNECT_API_KEY_URL: $BITFALL_APPSTORECONNECT_API_KEY_URL
   - BITFALL_APPSTORECONNECT_API_KEY_ID: $BITFALL_APPSTORECONNECT_API_KEY_ID
   - BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
@@ -58,6 +59,22 @@ workflows:
     - certificate-and-profile-installer: { }
     after_run:
     - _run
+
+  test_fallback_manual_signing:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
+    - CODE_SIGNING_METHOD: "off"
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+    - FALLBACK_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
+    after_run:
+    - _unset_and_backup_api_envs
+    - _run
+    - _restore_api_envs
 
   test_uitest_apple_id_signing:
     description: |-
@@ -269,6 +286,7 @@ workflows:
         - output_tool: xcodebuild
         - automatic_code_signing: $CODE_SIGNING_METHOD
         - certificate_url_list: $CERTIFICATE_URL_LIST
+        - fallback_provisioning_profile_url_list: $FALLBACK_PROVISIONING_PROFILE_URL_LIST
         - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
         - apple_team_id: $TEAM_ID
         - api_key_path: $API_KEY_PATH
