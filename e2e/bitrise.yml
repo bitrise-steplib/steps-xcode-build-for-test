@@ -16,34 +16,13 @@ app:
 
 workflows:
   test_swiftpm:
-    before_run:
-    - _expose_xcode_version
-    steps:
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ ${XCODE_MAJOR_VERSION} -gt 11 ]]; then
-              echo "This test case requires Xcode <= 11, skipping..."
-              exit 0
-            fi
-            envman add --key XCODE_MAJOR_VERSION_AT_MOST_11 --value "true"
-    - bitrise-run:
-        run_if: |-
-          {{ enveq "XCODE_MAJOR_VERSION_AT_MOST_11" "true" }}
-        inputs:
-        - workflow_id: utility_test_swiftpm
-        - bitrise_config_path: ./e2e/bitrise.yml
-
-  utility_test_swiftpm:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
     - SAMPLE_APP_BRANCH: codesign-update
     - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
     - BITRISE_SCHEME: sample swiftpm
     - DESTINATION: generic/platform=iOS
-    - CODE_SIGNING_METHOD: apple-id
+    - CODE_SIGNING_METHOD: api-key
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
@@ -198,7 +177,6 @@ workflows:
   test_test_plan_enabled_project:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
@@ -222,7 +200,6 @@ workflows:
   test_test_plan_enabled_project_test_plan_specified:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
@@ -323,28 +300,6 @@ workflows:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION_RUN_TEST
-
-  _expose_xcode_version:
-    steps:
-    - script:
-        title: Expose Xcode major version
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ ! -z "$XCODE_MAJOR_VERSION" ]]; then
-              echo "Xcode major version already exposed: $XCODE_MAJOR_VERSION"
-              exit 0
-            fi
-            version=`xcodebuild -version`
-            regex="Xcode ([0-9]*)."
-            if [[ ! $version =~ $regex ]]; then
-              echo "Failed to determine Xcode major version"
-              exit 1
-            fi
-            xcode_major_version=${BASH_REMATCH[1]}
-            echo "Xcode major version: $xcode_major_version"
-            envman add --key XCODE_MAJOR_VERSION --value $xcode_major_version
 
   _unset_and_backup_api_envs:
     steps:

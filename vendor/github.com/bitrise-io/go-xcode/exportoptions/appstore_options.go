@@ -8,6 +8,7 @@ import (
 
 // AppStoreOptionsModel ...
 type AppStoreOptionsModel struct {
+	Method                             Method
 	TeamID                             string
 	BundleIDProvisioningProfileMapping map[string]string
 	SigningCertificate                 string
@@ -22,21 +23,34 @@ type AppStoreOptionsModel struct {
 	UploadSymbols bool
 	// Should Xcode manage the app's build number when uploading to App Store Connect? Defaults to YES.
 	ManageAppVersion bool
+
+	TestFlightInternalTestingOnly bool
 }
 
-// NewAppStoreOptions ...
+// NewAppStoreOptions sets "app-store" as the export method
+// deprecated: use NewAppStoreConnectOptions instead
 func NewAppStoreOptions() AppStoreOptionsModel {
+	return NewAppStoreConnectOptions(MethodAppStore)
+}
+
+// NewAppStoreConnectOptions sets either "app-store" or "app-store-connect" as the export method
+func NewAppStoreConnectOptions(method Method) AppStoreOptionsModel {
+	if !method.IsAppStore() {
+		panic("non app-store method passed to NewAppStoreConnectOptions")
+	}
 	return AppStoreOptionsModel{
-		UploadBitcode:    UploadBitcodeDefault,
-		UploadSymbols:    UploadSymbolsDefault,
-		ManageAppVersion: manageAppVersionDefault,
+		Method:                        method,
+		UploadBitcode:                 UploadBitcodeDefault,
+		UploadSymbols:                 UploadSymbolsDefault,
+		ManageAppVersion:              manageAppVersionDefault,
+		TestFlightInternalTestingOnly: TestFlightInternalTestingOnlyDefault,
 	}
 }
 
 // Hash ...
 func (options AppStoreOptionsModel) Hash() map[string]interface{} {
 	hash := map[string]interface{}{}
-	hash[MethodKey] = MethodAppStore
+	hash[MethodKey] = options.Method
 	if options.TeamID != "" {
 		hash[TeamIDKey] = options.TeamID
 	}
@@ -72,6 +86,10 @@ func (options AppStoreOptionsModel) Hash() map[string]interface{} {
 	}
 	if options.Destination != "" {
 		hash[DestinationKey] = options.Destination
+	}
+	//nolint:gosimple
+	if options.TestFlightInternalTestingOnly != TestFlightInternalTestingOnlyDefault {
+		hash[TestFlightInternalTestingOnlyKey] = options.TestFlightInternalTestingOnly
 	}
 	return hash
 }
