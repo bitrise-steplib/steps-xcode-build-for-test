@@ -10,46 +10,12 @@ app:
   - BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
   - BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
   - BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
+  - BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
   - BITFALL_APPSTORECONNECT_API_KEY_URL: $BITFALL_APPSTORECONNECT_API_KEY_URL
   - BITFALL_APPSTORECONNECT_API_KEY_ID: $BITFALL_APPSTORECONNECT_API_KEY_ID
   - BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
 
 workflows:
-  test_swiftpm:
-    before_run:
-    - _expose_xcode_version
-    steps:
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ ${XCODE_MAJOR_VERSION} -gt 11 ]]; then
-              echo "This test case requires Xcode <= 11, skipping..."
-              exit 0
-            fi
-            envman add --key XCODE_MAJOR_VERSION_AT_MOST_11 --value "true"
-    - bitrise-run:
-        run_if: |-
-          {{ enveq "XCODE_MAJOR_VERSION_AT_MOST_11" "true" }}
-        inputs:
-        - workflow_id: utility_test_swiftpm
-        - bitrise_config_path: ./e2e/bitrise.yml
-
-  utility_test_swiftpm:
-    envs:
-    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-swiftpm.git
-    - SAMPLE_APP_BRANCH: codesign-update
-    - BITRISE_PROJECT_PATH: sample-swiftpm.xcodeproj
-    - BITRISE_SCHEME: sample swiftpm
-    - DESTINATION: generic/platform=iOS
-    - CODE_SIGNING_METHOD: apple-id
-    - TEAM_ID: 72SA8V3WYL
-    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
-    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
-
   manual_test_uitest_api_key_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
@@ -80,7 +46,37 @@ workflows:
     after_run:
     - _run
 
+  test_fallback_manual_signing:
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
+    - SAMPLE_APP_BRANCH: renamed-scheme
+    - BITRISE_PROJECT_PATH: ./ios-simple-objc/ios-simple-objc.xcodeproj
+    - BITRISE_SCHEME: renamed_scheme
+    - DESTINATION: generic/platform=iOS
+    - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+    - FALLBACK_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
+    after_run:
+    - _unset_and_backup_api_envs
+    - _invalid_login
+    - _run
+    - _restore_api_envs
+
   test_uitest_apple_id_signing:
+    description: |-
+       Running Apple ID tests on a single stack to avoid unreliability with parallel logins:
+       > Loading session from environment variable
+       > Session loaded from environment variable is not valid. Continuing with normal login.
+    steps:
+    - bitrise-run:
+        run_if: |-
+          {{ or (enveq "IS_LATEST_STACK_XCODE" "true") (not .IsCI) }}
+        inputs:
+        - workflow_id: utility_test_uitest_apple_id_signing
+        - bitrise_config_path: ./e2e/bitrise.yml
+
+  utility_test_uitest_apple_id_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
@@ -109,18 +105,8 @@ workflows:
     - API_KEY_PATH: $BITFALL_APPSTORECONNECT_API_KEY_URL
     - API_KEY_ID: $BITFALL_APPSTORECONNECT_API_KEY_ID
     - API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
-    steps:
-    - script:
-        title: Unset Bitrise API connection env vars
-        inputs:
-        - content: |-
-            #!/usr/bin/env bash
-            set -ex
-            envman add --key BITRISE_BUILD_URL_BACKUP --value $BITRISE_BUILD_URL
-            envman add --key BITRISE_BUILD_API_TOKEN_BACKUP --value $BITRISE_BUILD_API_TOKEN
-            envman unset --key BITRISE_BUILD_URL
-            envman unset --key BITRISE_BUILD_API_TOKEN
     after_run:
+    - _unset_and_backup_api_envs
     - _run
     - _restore_api_envs
 
@@ -195,7 +181,6 @@ workflows:
   test_test_plan_enabled_project:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
@@ -219,7 +204,6 @@ workflows:
   test_test_plan_enabled_project_test_plan_specified:
     steps:
     - script:
-        run_if: "{{getenv \"BITRISEIO_STACK_ID\" | ne \"osx-xcode-15.0.x-edge\"}}"
         inputs:
         - content: |-
             #!/bin/env bash
@@ -289,6 +273,7 @@ workflows:
         - output_tool: xcodebuild
         - automatic_code_signing: $CODE_SIGNING_METHOD
         - certificate_url_list: $CERTIFICATE_URL_LIST
+        - fallback_provisioning_profile_url_list: $FALLBACK_PROVISIONING_PROFILE_URL_LIST
         - passphrase_list: $CERTIFICATE_PASSPHRASE_LIST
         - apple_team_id: $TEAM_ID
         - api_key_path: $API_KEY_PATH
@@ -321,27 +306,18 @@ workflows:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION_RUN_TEST
 
-  _expose_xcode_version:
+  _unset_and_backup_api_envs:
     steps:
     - script:
-        title: Expose Xcode major version
+        title: Backup Bitrise API connection env vars
         inputs:
         - content: |-
-            #!/bin/env bash
-            set -e
-            if [[ ! -z "$XCODE_MAJOR_VERSION" ]]; then
-              echo "Xcode major version already exposed: $XCODE_MAJOR_VERSION"
-              exit 0
-            fi
-            version=`xcodebuild -version`
-            regex="Xcode ([0-9]*)."
-            if [[ ! $version =~ $regex ]]; then
-              echo "Failed to determine Xcode major version"
-              exit 1
-            fi
-            xcode_major_version=${BASH_REMATCH[1]}
-            echo "Xcode major version: $xcode_major_version"
-            envman add --key XCODE_MAJOR_VERSION --value $xcode_major_version
+            #!/usr/bin/env bash
+            set -ex
+            envman add --key BITRISE_BUILD_URL_BACKUP --value $BITRISE_BUILD_URL
+            envman add --key BITRISE_BUILD_API_TOKEN_BACKUP --value $BITRISE_BUILD_API_TOKEN
+            envman unset --key BITRISE_BUILD_URL
+            envman unset --key BITRISE_BUILD_API_TOKEN
 
   _restore_api_envs:
     steps:
@@ -352,3 +328,20 @@ workflows:
             set -ex
             envman add --key BITRISE_BUILD_URL --value $BITRISE_BUILD_URL_BACKUP
             envman add --key BITRISE_BUILD_API_TOKEN --value $BITRISE_BUILD_API_TOKEN_BACKUP
+
+  _invalid_login:
+    steps:
+    - script:
+        title: Set invalid login
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -ex
+            INVALID_BUILD_URL=./_invalid_authinfo
+            echo '{"key_id": "x", "issuer_id": "x", "private_key": "x"}' > $INVALID_BUILD_URL
+
+            BITRISE_BUILD_URL="file://$INVALID_BUILD_URL"
+            BITRISE_BUILD_API_TOKEN="x"
+
+            envman add --key BITRISE_BUILD_URL --value $BITRISE_BUILD_URL
+            envman add --key BITRISE_BUILD_API_TOKEN --value $BITRISE_BUILD_API_TOKEN

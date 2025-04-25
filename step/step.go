@@ -58,17 +58,18 @@ type Input struct {
 	// xcodebuild log formatting
 	LogFormatter string `env:"log_formatter,opt[xcpretty,xcodebuild]"`
 	// Automatic code signing
-	CodeSigningAuthSource     string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
-	RegisterTestDevices       bool            `env:"register_test_devices,opt[yes,no]"`
-	TestDeviceListPath        string          `env:"test_device_list_path"`
-	MinDaysProfileValid       int             `env:"min_profile_validity,required"`
-	TeamID                    string          `env:"apple_team_id"`
-	CertificateURLList        string          `env:"certificate_url_list"`
-	CertificatePassphraseList stepconf.Secret `env:"passphrase_list"`
-	KeychainPath              string          `env:"keychain_path"`
-	KeychainPassword          stepconf.Secret `env:"keychain_password"`
-	BuildURL                  string          `env:"BITRISE_BUILD_URL"`
-	BuildAPIToken             stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	CodeSigningAuthSource           string          `env:"automatic_code_signing,opt[off,api-key,apple-id]"`
+	RegisterTestDevices             bool            `env:"register_test_devices,opt[yes,no]"`
+	TestDeviceListPath              string          `env:"test_device_list_path"`
+	MinDaysProfileValid             int             `env:"min_profile_validity,required"`
+	TeamID                          string          `env:"apple_team_id"`
+	CertificateURLList              string          `env:"certificate_url_list"`
+	CertificatePassphraseList       stepconf.Secret `env:"passphrase_list"`
+	KeychainPath                    string          `env:"keychain_path"`
+	KeychainPassword                stepconf.Secret `env:"keychain_password"`
+	BuildURL                        string          `env:"BITRISE_BUILD_URL"`
+	BuildAPIToken                   stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	FallbackProvisioningProfileURLs string          `env:"fallback_provisioning_profile_url_list"`
 	// Step output configuration
 	OutputDir string `env:"output_dir,required"`
 	// Caching
@@ -185,25 +186,26 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		fileManager := fileutil.NewFileManager()
 
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
-			ProjectPath:               absProjectPath,
-			Scheme:                    input.Scheme,
-			Configuration:             input.Configuration,
-			CodeSigningAuthSource:     input.CodeSigningAuthSource,
-			RegisterTestDevices:       input.RegisterTestDevices,
-			TestDeviceListPath:        input.TestDeviceListPath,
-			MinDaysProfileValid:       input.MinDaysProfileValid,
-			TeamID:                    input.TeamID,
-			CertificateURLList:        input.CertificateURLList,
-			CertificatePassphraseList: input.CertificatePassphraseList,
-			KeychainPath:              input.KeychainPath,
-			KeychainPassword:          input.KeychainPassword,
-			BuildURL:                  input.BuildURL,
-			BuildAPIToken:             input.BuildAPIToken,
-			VerboseLog:                input.VerboseLog,
-			APIKeyPath:                input.APIKeyPath,
-			APIKeyID:                  input.APIKeyID,
-			APIKeyIssuerID:            input.APIKeyIssuerID,
-			APIKeyEnterpriseAccount:   input.APIKeyEnterpriseAccount,
+			ProjectPath:                  absProjectPath,
+			Scheme:                       input.Scheme,
+			Configuration:                input.Configuration,
+			CodeSigningAuthSource:        input.CodeSigningAuthSource,
+			RegisterTestDevices:          input.RegisterTestDevices,
+			TestDeviceListPath:           input.TestDeviceListPath,
+			MinDaysProfileValid:          input.MinDaysProfileValid,
+			TeamID:                       input.TeamID,
+			CertificateURLList:           input.CertificateURLList,
+			CertificatePassphraseList:    input.CertificatePassphraseList,
+			KeychainPath:                 input.KeychainPath,
+			KeychainPassword:             input.KeychainPassword,
+			FallbackProvisioningProfiles: input.FallbackProvisioningProfileURLs,
+			BuildURL:                     input.BuildURL,
+			BuildAPIToken:                input.BuildAPIToken,
+			VerboseLog:                   input.VerboseLog,
+			APIKeyPath:                   input.APIKeyPath,
+			APIKeyID:                     input.APIKeyID,
+			APIKeyIssuerID:               input.APIKeyIssuerID,
+			APIKeyEnterpriseAccount:      input.APIKeyEnterpriseAccount,
 		}, xcodebuildVersion.MajorVersion, b.logger, factory, fileManager)
 		if err != nil {
 			return Config{}, err

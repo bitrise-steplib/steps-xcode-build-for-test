@@ -21,25 +21,26 @@ import (
 )
 
 type CodesignManagerOpts struct {
-	ProjectPath               string
-	Scheme                    string
-	Configuration             string
-	CodeSigningAuthSource     string
-	RegisterTestDevices       bool
-	TestDeviceListPath        string
-	MinDaysProfileValid       int
-	TeamID                    string
-	CertificateURLList        string
-	CertificatePassphraseList stepconf.Secret
-	KeychainPath              string
-	KeychainPassword          stepconf.Secret
-	BuildURL                  string
-	BuildAPIToken             stepconf.Secret
-	VerboseLog                bool
-	APIKeyPath                stepconf.Secret
-	APIKeyID                  string
-	APIKeyIssuerID            string
-	APIKeyEnterpriseAccount   bool
+	ProjectPath                  string
+	Scheme                       string
+	Configuration                string
+	CodeSigningAuthSource        string
+	RegisterTestDevices          bool
+	TestDeviceListPath           string
+	MinDaysProfileValid          int
+	TeamID                       string
+	CertificateURLList           string
+	CertificatePassphraseList    stepconf.Secret
+	KeychainPath                 string
+	KeychainPassword             stepconf.Secret
+	FallbackProvisioningProfiles string
+	BuildURL                     string
+	BuildAPIToken                stepconf.Secret
+	VerboseLog                   bool
+	APIKeyPath                   stepconf.Secret
+	APIKeyID                     string
+	APIKeyIssuerID               string
+	APIKeyEnterpriseAccount      bool
 }
 
 func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager) (codesign.Manager, error) {
@@ -60,7 +61,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		CertificatePassphraseList:    managerOpts.CertificatePassphraseList,
 		KeychainPath:                 managerOpts.KeychainPath,
 		KeychainPassword:             managerOpts.KeychainPassword,
-		FallbackProvisioningProfiles: "",
+		FallbackProvisioningProfiles: managerOpts.FallbackProvisioningProfiles,
 	}
 
 	codesignConfig, err := codesign.ParseConfig(codesignInputs, cmdFactory)

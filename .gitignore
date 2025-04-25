@@ -3,3 +3,5 @@ _tmp/
 .gows.user.yml
 .idea/
 .DS_Store
+steps-xcode-build-for-test
+README.md.backup
