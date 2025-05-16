@@ -16,7 +16,7 @@ github.com/bitrise-io/go-steputils/tools
 ## explicit; go 1.17
 github.com/bitrise-io/go-steputils/v2/ruby
 github.com/bitrise-io/go-steputils/v2/stepconf
-# github.com/bitrise-io/go-utils v1.0.14
+# github.com/bitrise-io/go-utils v1.0.15
 ## explicit; go 1.13
 github.com/bitrise-io/go-utils/colorstring
 github.com/bitrise-io/go-utils/command
@@ -57,7 +57,7 @@ github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj
 github.com/bitrise-io/go-xcode/xcodeproject/xcscheme
 github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace
 github.com/bitrise-io/go-xcode/xcpretty
-# github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.57
+# github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.58
 ## explicit; go 1.22
 github.com/bitrise-io/go-xcode/v2/autocodesign
 github.com/bitrise-io/go-xcode/v2/autocodesign/certdownloader
@@ -116,10 +116,10 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
-# golang.org/x/crypto v0.37.0
+# golang.org/x/crypto v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/pbkdf2
-# golang.org/x/text v0.24.0
+# golang.org/x/text v0.25.0
 ## explicit; go 1.23.0
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
