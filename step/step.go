@@ -180,6 +180,8 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		}
 	}
 
+	customOptions = append(customOptions, strings.Split(env.NewRepository().Get("BITRISE_XCODEBUILD_ADDITIONAL_ARGUMENTS"), " ")...)
+
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
 		factory := v2command.NewFactory(env.NewRepository())
