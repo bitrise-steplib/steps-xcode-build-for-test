@@ -256,6 +256,15 @@ workflows:
             set -ex
             rm -rf "$BITRISE_SOURCE_DIR/_tmp"
             mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
+    - script:
+        title: Remove provisioning profiles from previous runs
+        run_if: .IsCI
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            rm -rf "~/Library/MobileDevice/Provisioning Profiles"
+            rm -rf "~/Library/Developer/Xcode/UserData/Provisioning Profiles"
     - git::https://github.com/bitrise-steplib/bitrise-step-simple-git-clone.git:
         inputs:
         - repository_url: $SAMPLE_APP_URL
