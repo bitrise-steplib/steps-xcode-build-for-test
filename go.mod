@@ -15,7 +15,7 @@ require (
 	github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10 // indirect
 	github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.37
 	github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.23
-	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.60
+	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.62.0.20250819141938-fbb123bca5f0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa // indirect
 	github.com/gofrs/uuid/v5 v5.2.0 // indirect
@@ -36,3 +36,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
 )
+
+require github.com/ryanuber/go-glob v1.0.0 // indirect
