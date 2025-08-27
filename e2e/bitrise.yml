@@ -27,9 +27,10 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
-    - _run_device_tests
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
+    - bundle::run_tests_on_device: { }
 
   test_uitest_certinstaller_signing:
     envs:
@@ -42,9 +43,9 @@ workflows:
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     steps:
+    - bundle::cleanup_profiles: { }
     - certificate-and-profile-installer: { }
-    after_run:
-    - _run
+    - bundle::run_step_test: { }
 
   test_fallback_manual_signing:
     envs:
@@ -57,26 +58,18 @@ workflows:
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     - FALLBACK_PROVISIONING_PROFILE_URL_LIST: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
-    after_run:
-    - _unset_and_backup_api_envs
-    - _invalid_login
-    - _run
-    - _restore_api_envs
+    steps:
+    - bundle::unset_and_backup_api_credentials: { }
+    - bundle::invalidate_api_credentials: { }
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
+    - bundle::restore_api_credentials: { }
 
   test_uitest_apple_id_signing:
     description: |-
        Running Apple ID tests on a single stack to avoid unreliability with parallel logins:
        > Loading session from environment variable
        > Session loaded from environment variable is not valid. Continuing with normal login.
-    steps:
-    - bitrise-run:
-        run_if: |-
-          {{ or (enveq "IS_LATEST_STACK_XCODE" "true") (not .IsCI) }}
-        inputs:
-        - workflow_id: utility_test_uitest_apple_id_signing
-        - bitrise_config_path: ./e2e/bitrise.yml
-
-  utility_test_uitest_apple_id_signing:
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-fastlane-test.git
     - SAMPLE_APP_BRANCH: master
@@ -88,8 +81,13 @@ workflows:
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles:
+        run_if: |-
+          {{ or (enveq "IS_LATEST_STACK_XCODE" "true") (not .IsCI) }}
+    - bundle::run_step_test:
+        run_if: |-
+          {{ or (enveq "IS_LATEST_STACK_XCODE" "true") (not .IsCI) }}
 
   test_uitest_api_key_override_signing:
     envs:
@@ -105,10 +103,11 @@ workflows:
     - API_KEY_PATH: $BITFALL_APPSTORECONNECT_API_KEY_URL
     - API_KEY_ID: $BITFALL_APPSTORECONNECT_API_KEY_ID
     - API_KEY_ISSUER_ID: $BITFALL_APPSTORECONNECT_API_KEY_ISSUER_ID
-    after_run:
-    - _unset_and_backup_api_envs
-    - _run
-    - _restore_api_envs
+    steps:
+    - bundle::unset_and_backup_api_credentials: { }
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
+    - bundle::restore_api_credentials: { }
 
   test_build_output_renamed:
     envs:
@@ -120,8 +119,9 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
 
   test_build_output_spaces:
     envs:
@@ -133,8 +133,9 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
 
   test_build_output_renamed_custom_build_options:
     envs:
@@ -147,8 +148,9 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
 
   test_build_output_spaces_custom_build_options_automatic_signing:
     envs:
@@ -161,8 +163,9 @@ workflows:
     - CODE_SIGNING_METHOD: api-key
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
 
   test_single_certificate_no_passphrase:
     envs:
@@ -175,8 +178,9 @@ workflows:
     - TEAM_ID: 72SA8V3WYL
     - CERTIFICATE_URL_LIST: $BITFALL_APPLE_IOS_CERTIFICATE_NOPASSPHRASE_URL
     - CERTIFICATE_PASSPHRASE_LIST: ""
-    after_run:
-    - _run
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
 
   test_test_plan_enabled_project:
     steps:
@@ -196,10 +200,10 @@ workflows:
     - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
-    before_run:
-    - _run
-    after_run:
-    - _run_test_without_building
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
+    - bundle::run_tests_on_simulator: { }
 
   test_test_plan_enabled_project_test_plan_specified:
     steps:
@@ -220,9 +224,9 @@ workflows:
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
     - TEST_PLAN: UnitTests
-    before_run:
-    - _run
     steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
     - script:
         title: Check xctestrun filename
         description: |-
@@ -244,10 +248,10 @@ workflows:
               exit 1
             fi
             echo "xctestrun filename matches"
-    after_run:
-    - _run_test_without_building
+    - bundle::run_tests_on_simulator: { }
 
-  _run:
+step_bundles:
+  run_step_test:
     steps:
     - script:
         inputs:
@@ -293,20 +297,30 @@ workflows:
             BITRISE_TEST_BUNDLE_ZIP_PATH
         - deployed_dirs:
 
-  _run_device_tests:
+  run_tests_on_device:
     steps:
     - virtual-device-testing-for-ios:
         inputs:
         - test_devices: iphone13pro,15.2,en,portrait
 
-  _run_test_without_building:
+  run_tests_on_simulator:
     steps:
     - xcode-test-without-building:
         inputs:
         - xctestrun: $BITRISE_XCTESTRUN_FILE_PATH
         - destination: $DESTINATION_RUN_TEST
 
-  _unset_and_backup_api_envs:
+  cleanup_profiles:
+    steps:
+    - script:
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            rm -rf ~/Library/MobileDevice/Provisioning\ Profiles/*
+            rm -rf ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*
+
+  unset_and_backup_api_credentials:
     steps:
     - script:
         title: Backup Bitrise API connection env vars
@@ -319,7 +333,7 @@ workflows:
             envman unset --key BITRISE_BUILD_URL
             envman unset --key BITRISE_BUILD_API_TOKEN
 
-  _restore_api_envs:
+  restore_api_credentials:
     steps:
     - script:
         title: Restore Bitrise API connection env vars
@@ -329,7 +343,7 @@ workflows:
             envman add --key BITRISE_BUILD_URL --value $BITRISE_BUILD_URL_BACKUP
             envman add --key BITRISE_BUILD_API_TOKEN --value $BITRISE_BUILD_API_TOKEN_BACKUP
 
-  _invalid_login:
+  invalidate_api_credentials:
     steps:
     - script:
         title: Set invalid login

@@ -402,7 +402,7 @@ func (b XcodebuildBuilder) automaticCodeSigning(codesignManager *codesign.Manage
 
 	b.logger.Infof("Preparing code signing assets (certificates, profiles)")
 
-	xcodebuildAuthParams, err := codesignManager.PrepareCodesigning()
+	xcodebuildAuthParams, _, err := codesignManager.PrepareCodesigning()
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare code signing assets: %w", err)
 	}
