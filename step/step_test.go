@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/mocks"
 	"github.com/stretchr/testify/mock"
@@ -95,7 +96,7 @@ type testingMocks struct {
 	logger       *mocks.Logger
 	xcodeproject *mocks.XcodeProject
 	pathChecker  *mocks.PathChecker
-	pathProvider *mocks.PathProvider
+	pathModifier *pathutil.PathModifier
 	fileManager  *mocks.FileManager
 }
 
@@ -103,16 +104,16 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 	logger := new(mocks.Logger)
 	xcodeproject := new(mocks.XcodeProject)
 	pathChecker := new(mocks.PathChecker)
-	pathProvider := new(mocks.PathProvider)
 	fileManager := new(mocks.FileManager)
+	pathModifier := pathutil.NewPathModifier()
 
-	step := NewXcodebuildBuilder(logger, xcodeproject, pathChecker, pathProvider, fileManager)
+	step := NewXcodebuildBuilder(logger, xcodeproject, pathChecker, pathModifier, fileManager)
 
 	mocks := testingMocks{
 		logger:       logger,
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
-		pathProvider: pathProvider,
+		pathModifier: &pathModifier,
 		fileManager:  fileManager,
 	}
 
