@@ -54,8 +54,8 @@ func run() int {
 func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
 	xcproject := xcodeproject.NewXcodeProject()
 	pathChecker := pathutil.NewPathChecker()
-	pathProvider := pathutil.NewPathProvider()
+	pathModifier := pathutil.NewPathModifier()
 	fileManager := step.NewFileManager()
 
-	return step.NewXcodebuildBuilder(logger, xcproject, pathChecker, pathProvider, fileManager)
+	return step.NewXcodebuildBuilder(logger, xcproject, pathChecker, pathModifier, fileManager)
 }
