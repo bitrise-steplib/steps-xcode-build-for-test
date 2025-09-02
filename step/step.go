@@ -105,16 +105,16 @@ type XcodebuildBuilder struct {
 	logger       v2log.Logger
 	xcodeproject xcodeproject.XcodeProject
 	pathChecker  v2pathutil.PathChecker
-	pathProvider v2pathutil.PathProvider
+	pathModifier v2pathutil.PathModifier
 	fileManager  FileManager
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathProvider v2pathutil.PathProvider, fileManager FileManager) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathModifier v2pathutil.PathModifier, fileManager FileManager) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		logger:       logger,
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
-		pathProvider: pathProvider,
+		pathModifier: pathModifier,
 		fileManager:  fileManager,
 	}
 }
@@ -305,9 +305,12 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	options := cfg.XcodebuildOptions
 	symRoot := findBuildSetting(options, "SYMROOT")
 	if symRoot == "" {
-		symRoot, err = b.pathProvider.CreateTempDir("test_bundle")
+		symRoot, err = b.pathModifier.AbsPath("./test_bundle")
 		if err != nil {
 			return RunOut{}, err
+		}
+		if err = os.MkdirAll(symRoot, 0755); err != nil {
+			return RunOut{}, fmt.Errorf("failed to create SYMROOT directory: %w", err)
 		}
 		options = append(options, fmt.Sprintf("SYMROOT=%s", symRoot))
 	}

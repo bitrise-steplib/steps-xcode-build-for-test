@@ -223,7 +223,7 @@ workflows:
     - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=iPhone 12 Pro Max
     - CODE_SIGNING_METHOD: "off"
-    - TEST_PLAN: UnitTests
+    - TEST_PLAN: FullTests
     steps:
     - bundle::cleanup_profiles: { }
     - bundle::run_step_test: { }
