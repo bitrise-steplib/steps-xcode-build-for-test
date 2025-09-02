@@ -306,11 +306,11 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	symRoot := findBuildSetting(options, "SYMROOT")
 	if symRoot == "" {
 		symRoot, err = b.pathModifier.AbsPath("./test_bundle")
-		if err := os.MkdirAll(symRoot, 0755); err != nil {
-			return RunOut{}, fmt.Errorf("failed to create SYMROOT directory: %w", err)
-		}
 		if err != nil {
 			return RunOut{}, err
+		}
+		if err = os.MkdirAll(symRoot, 0755); err != nil {
+			return RunOut{}, fmt.Errorf("failed to create SYMROOT directory: %w", err)
 		}
 		options = append(options, fmt.Sprintf("SYMROOT=%s", symRoot))
 	}
