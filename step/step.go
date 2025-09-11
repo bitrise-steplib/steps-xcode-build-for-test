@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,8 +81,9 @@ type Input struct {
 	APIKeyIssuerID          string          `env:"api_key_issuer_id"`
 	APIKeyEnterpriseAccount bool            `env:"api_key_enterprise_account,opt[yes,no]"`
 	// Debugging
-	VerboseLog       bool `env:"verbose_log,opt[yes,no]"`
-	CompressionLevel int  `env:"compression_level,range[0..9]"`
+	VerboseLog       bool   `env:"verbose_log,opt[yes,no]"`
+	SkipTesting      string `env:"skip_testing"`
+	CompressionLevel int    `env:"compression_level,range[0..9]"`
 }
 
 type Config struct {
@@ -99,6 +101,7 @@ type Config struct {
 	XcodebuildMajorVersion int
 	CacheLevel             string
 	SwiftPackagesPath      string
+	SkipTesting            []string
 }
 
 type XcodebuildBuilder struct {
@@ -213,6 +216,11 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		codesignManager = &codesignMgr
 	}
 
+	skipTesting, err := b.processTestConfiguration(input.SkipTesting)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to process test configuration: %w", err)
+	}
+
 	return Config{
 		ProjectPath:            absProjectPath,
 		Scheme:                 input.Scheme,
@@ -228,6 +236,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		XcodebuildMajorVersion: int(xcodebuildVersion.MajorVersion),
 		CacheLevel:             input.CacheLevel,
 		SwiftPackagesPath:      swiftPackagesPath,
+		SkipTesting:            skipTesting,
 	}, nil
 }
 
@@ -278,6 +287,27 @@ type RunOut struct {
 	SYMRoot             string
 }
 
+func (b XcodebuildBuilder) skipTesting(testPlan, projectPath string) error {
+	// Find the .xctestplan file based on the testPlan
+	var testPlanPath string
+	projectRootDir := filepath.Dir(projectPath)
+	if err := filepath.WalkDir(projectRootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), testPlan+".xctestplan") {
+			testPlanPath = path
+			return filepath.SkipAll
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	b.logger.Printf("testPlanPath: %s", testPlanPath)
+	return nil
+}
+
 func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	// Automatic code signing
 	authOptions, err := b.automaticCodeSigning(cfg.CodesignManager)
@@ -291,6 +321,8 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 			}
 		}
 	}()
+
+	// Update test plan
 
 	// Build for testing
 	b.logger.Println()
@@ -393,6 +425,34 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 	}
 
 	return nil
+}
+
+func (b XcodebuildBuilder) processTestConfiguration(input string) ([]string, error) {
+	if input == "" {
+		return nil, nil
+	}
+
+	exists, err := b.pathChecker.IsPathExists(input)
+	if err != nil {
+		return nil, err
+	}
+
+	var contents string
+
+	if exists {
+		bytes, err := os.ReadFile(input)
+		if err != nil {
+			return nil, err
+		}
+
+		contents = string(bytes)
+	} else {
+		contents = input
+	}
+
+	identifiers := strings.Split(contents, "\n")
+
+	return removeEmptyLines(identifiers), nil
 }
 
 func (b XcodebuildBuilder) automaticCodeSigning(codesignManager *codesign.Manager) (*xcodebuild.AuthenticationParams, error) {

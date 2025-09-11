@@ -72,3 +72,14 @@ func findBuildSetting(options []string, key string) string {
 
 	return ""
 }
+
+func removeEmptyLines(lines []string) []string {
+	var result []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			result = append(result, line)
+		}
+	}
+	return result
+}

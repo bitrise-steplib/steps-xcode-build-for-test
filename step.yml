@@ -396,6 +396,22 @@ inputs:
     - "no"
     is_required: true
 
+- skip_testing:
+  opts:
+    category: Test Selection
+    title: Test identifier list to skip
+    summary: The step will skip the listed tests during execution.
+    description: |-
+      The step will skip the listed tests during execution.
+
+      The input value sets xcodebuild's `-skip-testing` option and you can enter multiple test identifiers separated by a newline.
+      The input field supports the same options as xcodebuild:
+      - Test target name only: `MyAppTests`
+      - Test target and test class name: `MyAppTests/MyAppTests`
+      - Test target, class and function name: `MyAppTests/MyAppTests/testExample`
+
+      The input value can be a filepath as well which contains the list of tests separated by a newline character.
+
 - compression_level: 6
   opts:
     title: Compression level
