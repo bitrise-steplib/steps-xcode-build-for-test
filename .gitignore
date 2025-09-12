@@ -5,3 +5,4 @@ _tmp/
 .DS_Store
 steps-xcode-build-for-test
 README.md.backup
+.env

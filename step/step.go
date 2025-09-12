@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -216,6 +215,10 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		codesignManager = &codesignMgr
 	}
 
+	if input.SkipTesting != "" && input.TestPlan == "" {
+		return Config{}, errors.New("`Skip Testing` input is set, but `Test Plan` input is not. To skip tests the `Test Plan` input must be provided")
+	}
+
 	skipTesting, err := b.processTestConfiguration(input.SkipTesting)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to process test configuration: %w", err)
@@ -287,27 +290,6 @@ type RunOut struct {
 	SYMRoot             string
 }
 
-func (b XcodebuildBuilder) skipTesting(testPlan, projectPath string) error {
-	// Find the .xctestplan file based on the testPlan
-	var testPlanPath string
-	projectRootDir := filepath.Dir(projectPath)
-	if err := filepath.WalkDir(projectRootDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && strings.HasSuffix(d.Name(), testPlan+".xctestplan") {
-			testPlanPath = path
-			return filepath.SkipAll
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	b.logger.Printf("testPlanPath: %s", testPlanPath)
-	return nil
-}
-
 func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	// Automatic code signing
 	authOptions, err := b.automaticCodeSigning(cfg.CodesignManager)
@@ -323,6 +305,15 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	}()
 
 	// Update test plan
+	if len(cfg.SkipTesting) > 0 {
+		if cfg.TestPlan == "" {
+			return RunOut{}, errors.New("to skip tests the `Test Plan` input must be provided")
+		}
+
+		if err := b.skipTesting(cfg.TestPlan, cfg.ProjectPath, cfg.SkipTesting); err != nil {
+			return RunOut{}, fmt.Errorf("failed to update test plan to skip tests: %w", err)
+		}
+	}
 
 	// Build for testing
 	b.logger.Println()
