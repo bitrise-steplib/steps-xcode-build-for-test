@@ -457,7 +457,7 @@ func (b XcodebuildBuilder) processTestConfiguration(input string) ([]string, err
 	var contents string
 
 	if exists {
-		bytes, err := os.ReadFile(input)
+		bytes, err := b.fileManager.ReadFile(input)
 		if err != nil {
 			return nil, err
 		}
