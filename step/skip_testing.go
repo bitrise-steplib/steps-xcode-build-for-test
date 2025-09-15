@@ -107,7 +107,6 @@ func (b XcodebuildBuilder) writeTestPlan(testPlanPath string, updatedTestPlan ma
 		return fmt.Errorf("failed to write updated test plan to file: %w", err)
 	}
 
-	b.logger.Printf("Updated test plan written to: %s", testPlanPath)
 	return nil
 }
 

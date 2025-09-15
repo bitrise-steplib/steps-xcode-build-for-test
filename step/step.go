@@ -312,6 +312,9 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 			return RunOut{}, errors.New("to skip tests the `Test Plan` input must be provided")
 		}
 
+		b.logger.Println()
+		b.logger.Infof("Updating test plan (%s) to skip tests", cfg.TestPlan)
+
 		testPlanPath, err := b.findTestPlan(cfg.TestPlan, cfg.ProjectPath)
 		if err != nil {
 			return RunOut{}, fmt.Errorf("could not find test plan %s: %w", cfg.ProjectPath, err)
@@ -334,6 +337,8 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 		if err := b.addSkippedTestsToTestPlanFile(testPlanPath, cfg.SkipTesting); err != nil {
 			return RunOut{}, fmt.Errorf("failed to update test plan to skip tests: %w", err)
 		}
+
+		b.logger.Printf("%d skip testing item added to test plan", len(cfg.SkipTesting))
 	}
 
 	// Build for testing
