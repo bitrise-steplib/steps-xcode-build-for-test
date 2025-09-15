@@ -338,7 +338,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 			return RunOut{}, fmt.Errorf("failed to update test plan to skip tests: %w", err)
 		}
 
-		b.logger.Printf("%d skip testing item added to test plan", len(cfg.SkipTesting))
+		b.logger.Printf("%d skip testing item(s) added to test plan", len(cfg.SkipTesting))
 	}
 
 	// Build for testing
