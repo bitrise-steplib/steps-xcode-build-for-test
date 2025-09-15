@@ -4,32 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 )
 
-func (b XcodebuildBuilder) skipTesting(testPlan, projectPath string, skipTesting []string) error {
-	testPlanPath, err := b.findTestPlan(testPlan, projectPath)
-	if err != nil {
-		return fmt.Errorf("could not find test plan %s: %w", testPlan, err)
-	}
-	if testPlanPath == "" {
-		return fmt.Errorf("test plan %s not found in project directory", testPlan)
-	}
+// TestPathString is used to avoid JSON marshalling double escape "\" ("\\/").
+type TestPathString string
 
-	b.logger.Printf("Found test plan at: %s", testPlanPath)
-
-	updatedTestPlan, err := b.addSkippedTestsToTestPlan(testPlanPath, skipTesting)
-	if err != nil {
-		return fmt.Errorf("failed to add skipped tests to test plan: %w", err)
-	}
-
-	if err := b.writeTestPlan(testPlanPath, updatedTestPlan); err != nil {
-		return fmt.Errorf("failed to write updated test plan: %w", err)
-	}
-
-	return nil
+func (cs TestPathString) MarshalJSON() ([]byte, error) {
+	escaped := `"` + string(cs) + `"`
+	return []byte(escaped), nil
 }
 
 func (b XcodebuildBuilder) findTestPlan(testPlan, projectPath string) (string, error) {
@@ -56,35 +40,104 @@ func (b XcodebuildBuilder) findTestPlan(testPlan, projectPath string) (string, e
 	return testPlanPath, nil
 }
 
-type CustomString string
+func (b XcodebuildBuilder) backupTestPlan(testPlanPath string) (string, error) {
+	tmpDir, err := b.pathProvider.CreateTempDir("backupTestPlans")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir for backup: %w", err)
+	}
 
-func (cs CustomString) MarshalJSON() ([]byte, error) {
-	escaped := `"` + string(cs) + `"`
-	return []byte(escaped), nil
+	backupTestPlanPath := filepath.Join(tmpDir, filepath.Base(testPlanPath))
+
+	testPlanContent, err := b.fileManager.ReadFile(testPlanPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read original test plan: %w", err)
+	}
+
+	if err := b.fileManager.WriteFile(backupTestPlanPath, testPlanContent, 0644); err != nil {
+		return "", fmt.Errorf("failed to write backup test plan: %w", err)
+	}
+
+	return backupTestPlanPath, nil
 }
 
-func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlanPath string, skipTesting []string) (map[string]interface{}, error) {
-	// TestTarget[/TestClass[/TestMethod]]: MyAppTests/MyAppTests/testExample
-	skipTestingInTargets := map[string][]CustomString{}
+func (b XcodebuildBuilder) addSkippedTestsToTestPlanFile(testPlanPath string, skipTesting []string) error {
+	skipTestingInTargets, err := b.parseSkipTestingFormat(skipTesting)
+	if err != nil {
+		return fmt.Errorf("failed to parse skip testing format: %w", err)
+	}
+
+	testPlan, err := b.readAndParseTestPlan(testPlanPath)
+	if err != nil {
+		return fmt.Errorf("failed to read and parse test plan: %w", err)
+	}
+
+	updatedTestPlan, err := b.addSkippedTestsToTestPlan(testPlan, skipTestingInTargets)
+	if err != nil {
+		return fmt.Errorf("failed to add skipped tests to test plan: %w", err)
+	}
+
+	if err := b.writeTestPlan(testPlanPath, updatedTestPlan); err != nil {
+		return fmt.Errorf("failed to write updated test plan: %w", err)
+	}
+
+	return nil
+}
+
+func (b XcodebuildBuilder) restoreTestPlan(backupTestPlanPath, originalTestPlanPath string) error {
+	backupTestPlanContent, err := b.fileManager.ReadFile(backupTestPlanPath)
+	if err != nil {
+		return fmt.Errorf("failed to read backup test plan: %w", err)
+	}
+
+	if err := b.fileManager.WriteFile(originalTestPlanPath, backupTestPlanContent, 0644); err != nil {
+		return fmt.Errorf("failed to restore original test plan: %w", err)
+	}
+
+	b.logger.Printf("Original test plan restored from backup: %s", originalTestPlanPath)
+	return nil
+}
+
+func (b XcodebuildBuilder) writeTestPlan(testPlanPath string, updatedTestPlan map[string]interface{}) error {
+	updatedTestPlanContent, err := json.MarshalIndent(updatedTestPlan, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated test plan to JSON: %w", err)
+	}
+
+	if err := b.fileManager.WriteFile(testPlanPath, updatedTestPlanContent, 0644); err != nil {
+		return fmt.Errorf("failed to write updated test plan to file: %w", err)
+	}
+
+	b.logger.Printf("Updated test plan written to: %s", testPlanPath)
+	return nil
+}
+
+func (b XcodebuildBuilder) parseSkipTestingFormat(skipTesting []string) (map[string][]TestPathString, error) {
+	// skipTesting item format: TestTarget[/TestClass[/TestMethod]], for example: MyAppTests/MyAppTests/testExample
+	// skipTestingInTargets stores "TestClass/TestMethod" per TestTarget to be skipped.
+	// The test plan JSON file expects the "skippedTests" array items to have "/" escaped as "\/", TestPathString is used
+	// to avoid JSON marshalling double escape "\" ("\\/").
+	skipTestingInTargets := map[string][]TestPathString{}
 	for _, skipTest := range skipTesting {
 		skipTestSplit := strings.Split(skipTest, "/")
 		if len(skipTestSplit) == 1 {
-			return nil, fmt.Errorf("not yet supported skip testing format: %s", testPlanPath)
+			return nil, fmt.Errorf("not yet supported skip testing format: %s", skipTest)
 		}
 		if len(skipTestSplit) != 2 && len(skipTestSplit) != 3 {
-			return nil, fmt.Errorf("invalid skip testing format: %s", testPlanPath)
+			return nil, fmt.Errorf("invalid skip testing format: %s", skipTest)
 		}
 
 		skipTest = strings.Join(skipTestSplit[1:], "/")
-		//skipTestListItem := strings.Replace(skipTest, "/", `\/`, -1)
 		skipTest = strings.ReplaceAll(skipTest, "/", `\/`)
 		testTarget := skipTestSplit[0]
 		testTargetSkipTesting := skipTestingInTargets[testTarget]
-		testTargetSkipTesting = append(testTargetSkipTesting, CustomString(skipTest))
+		testTargetSkipTesting = append(testTargetSkipTesting, TestPathString(skipTest))
 		skipTestingInTargets[testTarget] = testTargetSkipTesting
 	}
+	return skipTestingInTargets, nil
+}
 
-	testPlanContent, err := os.ReadFile(testPlanPath)
+func (b XcodebuildBuilder) readAndParseTestPlan(testPlanPath string) (map[string]interface{}, error) {
+	testPlanContent, err := b.fileManager.ReadFile(testPlanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test plan file: %w", err)
 	}
@@ -94,6 +147,10 @@ func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlanPath string, skipTe
 		return nil, fmt.Errorf("failed to unmarshal test plan JSON: %w", err)
 	}
 
+	return testPlan, nil
+}
+
+func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlan map[string]interface{}, skipTestingInTargets map[string][]TestPathString) (map[string]interface{}, error) {
 	testTargetsRaw, ok := testPlan["testTargets"]
 	if !ok {
 		return nil, fmt.Errorf("testTargets not found in test plan")
@@ -132,7 +189,7 @@ func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlanPath string, skipTe
 			continue
 		}
 
-		var skippedTests []CustomString
+		var skippedTests []TestPathString
 		skippedTestsRaw, ok := target["skippedTests"]
 		if ok {
 			skippedTestsList, ok := skippedTestsRaw.([]string)
@@ -141,7 +198,7 @@ func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlanPath string, skipTe
 			}
 
 			for _, skippedTestsListItem := range skippedTestsList {
-				skippedTests = append(skippedTests, CustomString(skippedTestsListItem))
+				skippedTests = append(skippedTests, TestPathString(skippedTestsListItem))
 			}
 		}
 
@@ -153,18 +210,4 @@ func (b XcodebuildBuilder) addSkippedTestsToTestPlan(testPlanPath string, skipTe
 	}
 
 	return testPlan, nil
-}
-
-func (b XcodebuildBuilder) writeTestPlan(testPlanPath string, updatedTestPlan map[string]interface{}) error {
-	updatedTestPlanContent, err := json.MarshalIndent(updatedTestPlan, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated test plan to JSON: %w", err)
-	}
-
-	if err := b.fileManager.WriteFile(testPlanPath, updatedTestPlanContent, 0644); err != nil {
-		return fmt.Errorf("failed to write updated test plan to file: %w", err)
-	}
-
-	b.logger.Printf("Updated test plan written to: %s", testPlanPath)
-	return nil
 }

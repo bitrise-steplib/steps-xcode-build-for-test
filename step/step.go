@@ -108,15 +108,17 @@ type XcodebuildBuilder struct {
 	xcodeproject xcodeproject.XcodeProject
 	pathChecker  v2pathutil.PathChecker
 	pathModifier v2pathutil.PathModifier
+	pathProvider v2pathutil.PathProvider
 	fileManager  FileManager
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathModifier v2pathutil.PathModifier, fileManager FileManager) XcodebuildBuilder {
+func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathModifier v2pathutil.PathModifier, pathProvider v2pathutil.PathProvider, fileManager FileManager) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		logger:       logger,
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
 		pathModifier: pathModifier,
+		pathProvider: pathProvider,
 		fileManager:  fileManager,
 	}
 }
@@ -310,7 +312,26 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 			return RunOut{}, errors.New("to skip tests the `Test Plan` input must be provided")
 		}
 
-		if err := b.skipTesting(cfg.TestPlan, cfg.ProjectPath, cfg.SkipTesting); err != nil {
+		testPlanPath, err := b.findTestPlan(cfg.TestPlan, cfg.ProjectPath)
+		if err != nil {
+			return RunOut{}, fmt.Errorf("could not find test plan %s: %w", cfg.ProjectPath, err)
+		}
+		if testPlanPath == "" {
+			return RunOut{}, fmt.Errorf("test plan %s not found in project directory", cfg.ProjectPath)
+		}
+
+		backupTestPlanPath, err := b.backupTestPlan(testPlanPath)
+		if err != nil {
+			return RunOut{}, fmt.Errorf("failed to backup test plan: %w", err)
+		}
+
+		defer func() {
+			if err := b.restoreTestPlan(backupTestPlanPath, testPlanPath); err != nil {
+				b.logger.Warnf("failed to restore original test plan: %s", err)
+			}
+		}()
+
+		if err := b.addSkippedTestsToTestPlanFile(testPlanPath, cfg.SkipTesting); err != nil {
 			return RunOut{}, fmt.Errorf("failed to update test plan to skip tests: %w", err)
 		}
 	}
