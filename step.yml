@@ -126,7 +126,7 @@ inputs:
     description: |-
       The step will skip the listed tests during building your app and tests.
 
-      Based on this input, the specified Test Plan will be modified to exclude the listed tests, 
+      Based on this input, the specified Test Plan will be modified to exclude the listed tests,
       therefore, specifying the Test Plan is mandatory.
 
       You can enter multiple test identifiers separated by a newline.
