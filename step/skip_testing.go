@@ -3,7 +3,6 @@ package step
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -17,27 +16,7 @@ func (cs TestPathString) MarshalJSON() ([]byte, error) {
 }
 
 func (b XcodebuildBuilder) findTestPlan(testPlan, projectPath string) (string, error) {
-	var testPlanPath string
-	projectRootDir := filepath.Dir(projectPath)
-	if err := filepath.WalkDir(projectRootDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		if filepath.Base(path) == testPlan+".xctestplan" {
-			testPlanPath = path
-			return filepath.SkipAll
-		}
-
-		return nil
-	}); err != nil {
-		return "", err
-	}
-
-	return testPlanPath, nil
+	return b.fileManager.FindFile(filepath.Dir(projectPath), testPlan+".xctestplan")
 }
 
 func (b XcodebuildBuilder) backupTestPlan(testPlanPath string) (string, error) {

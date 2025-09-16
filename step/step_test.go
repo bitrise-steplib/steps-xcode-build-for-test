@@ -12,6 +12,66 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_GivenProject_WhenSkippingTests_ThenUpdatestTestPlan(t *testing.T) {
+	// Given
+	step, stepMocks := createStepAndMocks()
+
+	projectPth := "BullsEye.xcworkspace"
+	testPlan := "FullTests"
+	testPlanPath := "path/to/FullTests.xctestplan"
+	testPlanContent := []byte(`{
+    "testTargets": [
+        {
+            "target": {
+                "containerPath": "container:BullsEye.xcodeproj",
+                "identifier": "13FB7D0B26773C570084066F",
+                "name": "BullsEyeUITests"
+            }
+        }
+    ]
+}
+`)
+	tmpDir := "tmp"
+	tmpTestPlanPath := filepath.Join(tmpDir, "FullTests.xctestplan")
+	skipTesting := []string{"BullsEyeUITests/BullsEyeUITests/testExample"}
+	// skippedTests field added to the original test plan content
+	updatedTestPlan := []byte(`{
+  "testTargets": [
+    {
+      "skippedTests": [
+        "BullsEyeUITests\/testExample"
+      ],
+      "target": {
+        "containerPath": "container:BullsEye.xcodeproj",
+        "identifier": "13FB7D0B26773C570084066F",
+        "name": "BullsEyeUITests"
+      }
+    }
+  ]
+}`)
+
+	stepMocks.logger.On("Println").Return()
+	stepMocks.logger.On("Infof", "Updating test plan (%s) to skip tests", testPlan).Return()
+	stepMocks.logger.On("Printf", "Original test plan restored from backup: %s", testPlanPath).Return()
+	stepMocks.logger.On("Printf", "%d skip testing item(s) added to test plan", 1).Return()
+
+	// find and update test plan
+	stepMocks.fileManager.On("FindFile", ".", testPlan+".xctestplan").Return(testPlanPath, nil)
+	stepMocks.fileManager.On("ReadFile", testPlanPath).Return(testPlanContent, nil)
+	stepMocks.fileManager.On("WriteFile", testPlanPath, updatedTestPlan, mock.Anything).Return(nil)
+	// backup and restore test plan
+	stepMocks.pathProvider.On("CreateTempDir", mock.Anything).Return(tmpDir, nil)
+	stepMocks.fileManager.On("WriteFile", tmpTestPlanPath, testPlanContent, mock.Anything).Return(nil)
+	stepMocks.fileManager.On("ReadFile", tmpTestPlanPath).Return(testPlanContent, nil)
+	stepMocks.fileManager.On("WriteFile", testPlanPath, testPlanContent, mock.Anything).Return(nil)
+
+	// When
+	err := step.skipTesting(testPlan, projectPth, skipTesting)
+
+	// Then
+	require.NoError(t, err)
+}
+
 func Test_GivenIosProjectProducesOneXctestrun_WhenFindTestBundle_ThenReturnsTestBundle(t *testing.T) {
 	// Given
 	step, stepMocks := createStepAndMocks()
@@ -97,6 +157,7 @@ type testingMocks struct {
 	xcodeproject *mocks.XcodeProject
 	pathChecker  *mocks.PathChecker
 	pathModifier *pathutil.PathModifier
+	pathProvider *mocks.PathProvider
 	fileManager  *mocks.FileManager
 }
 
@@ -115,6 +176,7 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 		xcodeproject: xcodeproject,
 		pathChecker:  pathChecker,
 		pathModifier: &pathModifier,
+		pathProvider: pathProvider,
 		fileManager:  fileManager,
 	}
 

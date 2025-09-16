@@ -312,33 +312,9 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 			return RunOut{}, errors.New("to skip tests the `Test Plan` input must be provided")
 		}
 
-		b.logger.Println()
-		b.logger.Infof("Updating test plan (%s) to skip tests", cfg.TestPlan)
-
-		testPlanPath, err := b.findTestPlan(cfg.TestPlan, cfg.ProjectPath)
-		if err != nil {
-			return RunOut{}, fmt.Errorf("could not find test plan %s: %w", cfg.ProjectPath, err)
+		if err := b.skipTesting(cfg.TestPlan, cfg.ProjectPath, cfg.SkipTesting); err != nil {
+			return RunOut{}, err
 		}
-		if testPlanPath == "" {
-			return RunOut{}, fmt.Errorf("test plan %s not found in project directory", cfg.ProjectPath)
-		}
-
-		backupTestPlanPath, err := b.backupTestPlan(testPlanPath)
-		if err != nil {
-			return RunOut{}, fmt.Errorf("failed to backup test plan: %w", err)
-		}
-
-		defer func() {
-			if err := b.restoreTestPlan(backupTestPlanPath, testPlanPath); err != nil {
-				b.logger.Warnf("failed to restore original test plan: %s", err)
-			}
-		}()
-
-		if err := b.addSkippedTestsToTestPlanFile(testPlanPath, cfg.SkipTesting); err != nil {
-			return RunOut{}, fmt.Errorf("failed to update test plan to skip tests: %w", err)
-		}
-
-		b.logger.Printf("%d skip testing item(s) added to test plan", len(cfg.SkipTesting))
 	}
 
 	// Build for testing
@@ -441,6 +417,37 @@ func (b XcodebuildBuilder) ExportOutputs(opts ExportOpts) error {
 		b.logger.Warnf("%s", err)
 	}
 
+	return nil
+}
+
+func (b XcodebuildBuilder) skipTesting(testPlan, projectPath string, skipTesting []string) error {
+	b.logger.Println()
+	b.logger.Infof("Updating test plan (%s) to skip tests", testPlan)
+
+	testPlanPath, err := b.findTestPlan(testPlan, projectPath)
+	if err != nil {
+		return fmt.Errorf("could not find test plan %s: %w", projectPath, err)
+	}
+	if testPlanPath == "" {
+		return fmt.Errorf("test plan %s not found in project directory", projectPath)
+	}
+
+	backupTestPlanPath, err := b.backupTestPlan(testPlanPath)
+	if err != nil {
+		return fmt.Errorf("failed to backup test plan: %w", err)
+	}
+
+	defer func() {
+		if err := b.restoreTestPlan(backupTestPlanPath, testPlanPath); err != nil {
+			b.logger.Warnf("failed to restore original test plan: %s", err)
+		}
+	}()
+
+	if err := b.addSkippedTestsToTestPlanFile(testPlanPath, skipTesting); err != nil {
+		return fmt.Errorf("failed to update test plan to skip tests: %w", err)
+	}
+
+	b.logger.Printf("%d skip testing item(s) added to test plan", len(skipTesting))
 	return nil
 }
 

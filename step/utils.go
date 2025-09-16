@@ -3,6 +3,7 @@ package step
 import (
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -14,6 +15,7 @@ type FileManager interface {
 	ReadFile(pth string) ([]byte, error)
 	WriteFile(filename string, data []byte, perm fs.FileMode) error
 	ReadDir(name string) ([]os.DirEntry, error)
+	FindFile(root string, name string) (string, error)
 }
 
 type fileManager struct {
@@ -33,6 +35,31 @@ func (m fileManager) WriteFile(filename string, data []byte, perm fs.FileMode) e
 
 func (m fileManager) ReadDir(name string) ([]os.DirEntry, error) {
 	return os.ReadDir(name)
+}
+
+func (m fileManager) FindFile(root string, name string) (string, error) {
+	var pth string
+	//projectRootDir := filepath.Dir(projectPath)
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		//if filepath.Base(path) == testPlan+".xctestplan" {
+		if filepath.Base(path) == name {
+			pth = path
+			return filepath.SkipAll
+		}
+
+		return nil
+	}); err != nil {
+		return "", err
+	}
+
+	return pth, nil
 }
 
 func printLastLinesOfXcodebuildTestLog(rawXcodebuildOutput string, isRunSuccess bool, logger log.Logger) {
