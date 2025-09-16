@@ -71,6 +71,17 @@ inputs:
       The input value sets xcodebuild's `-project` or `-workspace` option.
     is_required: true
 
+- test_plan:
+  opts:
+    title: Test Plan
+    summary: Build tests for a specific Test Plan associated with the Scheme.
+    description: |-
+      Build tests for a specific Test Plan associated with the Scheme.
+
+      Leave this input empty to build all the Test Plans or Test Targets associated with the Scheme.
+
+      The input value sets xcodebuild's `-testPlan` option.
+
 - scheme: $BITRISE_SCHEME
   opts:
     title: Scheme
@@ -107,16 +118,23 @@ inputs:
       The input value sets xcodebuild's `-destination` option.
     is_required: true
 
-- test_plan:
+- skip_testing:
   opts:
-    title: Test Plan
-    summary: Build tests for a specific Test Plan associated with the Scheme.
+    category: Test Selection
+    title: Test identifier list to skip
+    summary: The step will skip the listed tests during building your app and tests.
     description: |-
-      Build tests for a specific Test Plan associated with the Scheme.
+      The step will skip the listed tests during building your app and tests.
 
-      Leave this input empty to build all the Test Plans or Test Targets associated with the Scheme.
+      Based on this input, the specified Test Plan will be modified to exclude the listed tests, 
+      therefore, specifying the Test Plan is mandatory.
 
-      The input value sets xcodebuild's `-testPlan` option.
+      You can enter multiple test identifiers separated by a newline.
+      The input field supports the following test identifier formats:
+      - Test target and test class name: `MyAppTests/MyAppTests`
+      - Test target, class and function name: `MyAppTests/MyAppTests/testExample`
+
+      The input value can be a filepath as well which contains the list of tests separated by a newline character.
 
 # xcodebuild configuration
 
@@ -308,33 +326,6 @@ inputs:
       For example: `./profilesDirectory/`
     is_sensitive: true
 
-# Step output configuration
-
-- output_dir: $BITRISE_DEPLOY_DIR
-  opts:
-    category: Step output configuration
-    title: Output directory path
-    summary: This directory will contain the generated artifacts.
-    is_required: true
-
-# Caching
-
-- cache_level: swift_packages
-  opts:
-    category: Caching
-    title: Enable collecting cache content
-    summary: Defines what cache content should be automatically collected.
-    description: |-
-      Defines what cache content should be automatically collected.
-
-      Available options:
-      - `none`: Disable collecting cache content.
-      - `swift_packages`: Collect Swift PM packages added to the Xcode project.
-    value_options:
-    - none
-    - swift_packages
-    is_required: true
-
 # App Store Connect connection override
 
 - api_key_path:
@@ -384,6 +375,47 @@ inputs:
     - "no"
     is_required: true
 
+# Step output configuration
+
+- compression_level: 6
+  opts:
+    category: Step output configuration
+    title: Compression level
+    summary: ZIP compression level to control speed / archive size.
+    description: |-
+      ZIP compression level to control speed / archive size.
+
+      Valid values are between 0 and 9. Defaults to 6.
+      - 0: no compression
+      - 1: fastest compression
+      - 9: best compression
+    is_required: false
+
+- output_dir: $BITRISE_DEPLOY_DIR
+  opts:
+    category: Step output configuration
+    title: Output directory path
+    summary: This directory will contain the generated artifacts.
+    is_required: true
+
+# Caching
+
+- cache_level: swift_packages
+  opts:
+    category: Caching
+    title: Enable collecting cache content
+    summary: Defines what cache content should be automatically collected.
+    description: |-
+      Defines what cache content should be automatically collected.
+
+      Available options:
+      - `none`: Disable collecting cache content.
+      - `swift_packages`: Collect Swift PM packages added to the Xcode project.
+    value_options:
+    - none
+    - swift_packages
+    is_required: true
+
 # Debugging
 
 - verbose_log: "no"
@@ -395,35 +427,6 @@ inputs:
     - "yes"
     - "no"
     is_required: true
-
-- skip_testing:
-  opts:
-    category: Test Selection
-    title: Test identifier list to skip
-    summary: The step will skip the listed tests during execution.
-    description: |-
-      The step will skip the listed tests during execution.
-
-      The input value sets xcodebuild's `-skip-testing` option and you can enter multiple test identifiers separated by a newline.
-      The input field supports the same options as xcodebuild:
-      - Test target name only: `MyAppTests`
-      - Test target and test class name: `MyAppTests/MyAppTests`
-      - Test target, class and function name: `MyAppTests/MyAppTests/testExample`
-
-      The input value can be a filepath as well which contains the list of tests separated by a newline character.
-
-- compression_level: 6
-  opts:
-    title: Compression level
-    summary: ZIP compression level to control speed / archive size.
-    description: |-
-      ZIP compression level to control speed / archive size.
-
-      Valid values are between 0 and 9. Defaults to 6.
-      - 0: no compression
-      - 1: fastest compression
-      - 9: best compression
-    is_required: false
 
 outputs:
 - BITRISE_TEST_BUNDLE_PATH:
