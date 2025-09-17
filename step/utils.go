@@ -39,7 +39,6 @@ func (m fileManager) ReadDir(name string) ([]os.DirEntry, error) {
 
 func (m fileManager) FindFile(root string, name string) (string, error) {
 	var pth string
-	//projectRootDir := filepath.Dir(projectPath)
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -48,7 +47,6 @@ func (m fileManager) FindFile(root string, name string) (string, error) {
 			return nil
 		}
 
-		//if filepath.Base(path) == testPlan+".xctestplan" {
 		if filepath.Base(path) == name {
 			pth = path
 			return filepath.SkipAll

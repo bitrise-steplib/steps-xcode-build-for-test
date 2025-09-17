@@ -48,10 +48,12 @@ const (
 
 type Input struct {
 	ProjectPath   string `env:"project_path,required"`
+	TestPlan      string `env:"test_plan"`
 	Scheme        string `env:"scheme,required"`
 	Configuration string `env:"configuration"`
 	Destination   string `env:"destination,required"`
-	TestPlan      string `env:"test_plan"`
+	// Test Selection
+	SkipTesting string `env:"skip_testing"`
 	// xcodebuild configuration
 	XCConfigContent   string `env:"xcconfig_content"`
 	XcodebuildOptions string `env:"xcodebuild_options"`
@@ -70,19 +72,18 @@ type Input struct {
 	BuildURL                        string          `env:"BITRISE_BUILD_URL"`
 	BuildAPIToken                   stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
 	FallbackProvisioningProfileURLs string          `env:"fallback_provisioning_profile_url_list"`
-	// Step output configuration
-	OutputDir string `env:"output_dir,required"`
-	// Caching
-	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
 	// App Store Connect connection override
 	APIKeyPath              stepconf.Secret `env:"api_key_path"`
 	APIKeyID                string          `env:"api_key_id"`
 	APIKeyIssuerID          string          `env:"api_key_issuer_id"`
 	APIKeyEnterpriseAccount bool            `env:"api_key_enterprise_account,opt[yes,no]"`
-	// Debugging
-	VerboseLog       bool   `env:"verbose_log,opt[yes,no]"`
-	SkipTesting      string `env:"skip_testing"`
+	// Step output configuration
 	CompressionLevel int    `env:"compression_level,range[0..9]"`
+	OutputDir        string `env:"output_dir,required"`
+	// Caching
+	CacheLevel string `env:"cache_level,opt[none,swift_packages]"`
+	// Debugging
+	VerboseLog bool `env:"verbose_log,opt[yes,no]"`
 }
 
 type Config struct {
