@@ -7,7 +7,9 @@ import (
 	"strings"
 )
 
-// TestPathString is used to avoid JSON marshalling double escape "\" ("\\/").
+// TestPathString is used to avoid JSON marshalling double escape "\".
+// In a Test Plan file, the "skippedTests" array items have "/" escaped as "\/",
+// tha standard JSON marshalling would escape "\" as "\\".
 type TestPathString string
 
 func (cs TestPathString) MarshalJSON() ([]byte, error) {
