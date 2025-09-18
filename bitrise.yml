@@ -42,7 +42,7 @@ workflows:
         title: Xcode Test without building
         inputs:
         - destination: platform=iOS Simulator,name=iPhone 16,OS=latest
-    - deploy-to-bitrise-io: {}
+    - deploy-to-bitrise-io: { }
 
   generate_readme:
     steps:
