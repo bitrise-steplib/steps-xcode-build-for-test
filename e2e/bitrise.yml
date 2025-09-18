@@ -189,7 +189,7 @@ workflows:
     - BITRISE_PROJECT_PATH: BullsEye.xcworkspace
     - BITRISE_SCHEME: BullsEye
     - SKIP_TESTING: BullsEyeUITests/BullsEyeUITests2/testGameStyleSwitch()
-    - BITRISE_TEST_PLAN: UITests
+    - TEST_PLAN: UITests
     - DESTINATION: generic/platform=iOS Simulator
     - DESTINATION_RUN_TEST: platform=iOS Simulator,name=Bitrise iOS default,OS=latest
     - CODE_SIGNING_METHOD: "off"
