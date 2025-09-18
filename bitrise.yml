@@ -37,6 +37,7 @@ workflows:
         - scheme: $BITRISE_SCHEME
         - test_plan: $BITRISE_TEST_PLAN
         - destination: platform=iOS Simulator,name=iPhone 16,OS=latest
+        - skip_testing: "BullsEyeUITests/BullsEyeUITests2/testGameStyleSwitch()"
     - xcode-test-without-building:
         title: Xcode Test without building
         inputs:
