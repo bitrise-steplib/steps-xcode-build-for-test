@@ -198,6 +198,30 @@ workflows:
     - bundle::run_step_test: { }
     - bundle::run_tests_on_simulator: { }
     - deploy-to-bitrise-io: { }
+    - script:
+        title: Check skipped tests
+        summary: This Step checks if the test results contain the skipped test method or not.
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -ex
+
+            out=$(xcrun xcresulttool get test-results tests --path "$BITRISE_XCRESULT_PATH")
+            xcresulttool_exit_code=$?
+
+            if [ $xcresulttool_exit_code -ne 0 ]; then
+              echo "failed to get test results from xcresult: $out"
+              exit 1
+            fi
+
+            # Check if the skipped test method is in the results
+            set +e
+            grep_out=$(echo "$out" | grep "BullsEyeUITests2/testGameStyleSwitch()")
+
+            if [ ! -z "$grep_out" ]; then
+              echo "skipped test method found in test results"
+              exit 1
+            fi
 
   test_test_plan_enabled_project:
     steps:

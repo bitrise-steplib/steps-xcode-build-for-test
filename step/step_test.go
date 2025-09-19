@@ -66,7 +66,7 @@ func Test_GivenProject_WhenSkippingTests_ThenUpdatestTestPlan(t *testing.T) {
 	stepMocks.fileManager.On("WriteFile", testPlanPath, testPlanContent, mock.Anything).Return(nil)
 
 	// When
-	err := step.skipTesting(testPlan, projectPth, skipTesting)
+	_, err := step.skipTesting(testPlan, projectPth, skipTesting)
 
 	// Then
 	require.NoError(t, err)
