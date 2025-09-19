@@ -433,10 +433,10 @@ func (b XcodebuildBuilder) skipTesting(testPlan, projectPath string, skipTesting
 
 	testPlanPath, err := b.findTestPlan(testPlan, projectPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not find test plan %s: %w", projectPath, err)
+		return nil, fmt.Errorf("could not find test plan %s: %w", testPlan, err)
 	}
 	if testPlanPath == "" {
-		return nil, fmt.Errorf("test plan %s not found in project directory", projectPath)
+		return nil, fmt.Errorf("test plan %s not found in project directory", testPlan)
 	}
 
 	backupTestPlanPath, err := b.backupTestPlan(testPlanPath)

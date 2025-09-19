@@ -203,7 +203,7 @@ workflows:
         summary: This Step checks if the test results contain the skipped test method or not.
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -ex
 
             out=$(xcrun xcresulttool get test-results tests --path "$BITRISE_XCRESULT_PATH")
@@ -228,7 +228,7 @@ workflows:
     - script:
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -x # Do not set -e as bitrise command is expected to fail
             bitrise run --config=./e2e/bitrise.yml utility_test_test_plan_enabled_project
 
@@ -251,7 +251,7 @@ workflows:
     - script:
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -x # Do not set -e as bitrise command is expected to fail
             bitrise run --config=./e2e/bitrise.yml utility_test_test_plan_enabled_project_test_plan_specified
 
@@ -275,7 +275,7 @@ workflows:
           If not, `Step.findTestBundle`'s default xctestrun search needs to be updated.
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -e
 
             base="$(basename -- $BITRISE_XCTESTRUN_FILE_PATH)"
@@ -298,7 +298,7 @@ step_bundles:
     - script:
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -ex
             rm -rf "$BITRISE_SOURCE_DIR/_tmp"
             mkdir -p "$BITRISE_SOURCE_DIR/_tmp"
@@ -392,7 +392,7 @@ step_bundles:
         title: Set invalid login
         inputs:
         - content: |-
-            #!/bin/env bash
+            #!/usr/bin/env bash
             set -ex
             INVALID_BUILD_URL=./_invalid_authinfo
             echo '{"key_id": "x", "issuer_id": "x", "private_key": "x"}' > $INVALID_BUILD_URL
