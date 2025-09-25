@@ -590,10 +590,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 	//	+ Debug-iphonesimulator/
 	//	+ Debug-watchsimulator/
 	for _, builtTestsDir := range entries {
-		abspath, err := filepath.Abs(builtTestsDir.Name())
-		if err != nil {
-			continue
-		}
+		abspath := filepath.Join(symroot, builtTestsDir.Name())
 		if exists, err := b.pathChecker.IsDirExists(abspath); exists && err == nil {
 			args = append(args, builtTestsDir.Name())
 		}
