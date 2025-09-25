@@ -37,7 +37,7 @@ workflows:
         - project_path: ./_tmp/$BITRISE_PROJECT_PATH
         - verbose_log: "yes"
         - xcodebuild_options: CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
-        - destination: "generic/platform=iOS Simulator"
+        - destination: generic/platform=iOS Simulator
 
   generate_readme:
     steps:

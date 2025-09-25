@@ -1,8 +1,8 @@
-dir: "mocks"
+dir: mocks
 filename: "{{.InterfaceName}}.go"
-pkgname: 'mocks'
+pkgname: mocks
 formatter: goimports
-structname: '{{.InterfaceName}}'
+structname: "{{.InterfaceName}}"
 template: testify
 packages:
     github.com/bitrise-io/go-utils/v2/log:
@@ -22,17 +22,17 @@ packages:
         interfaces:
             Runner:
                 config:
-                    structname: 'XCCommandRunner'
-                    filename: "XCCommandRunner.go"
+                    structname: XCCommandRunner
+                    filename: XCCommandRunner.go
     github.com/bitrise-io/go-xcode/v2/xcodeversion:
         interfaces:
             Reader:
                 config:
-                    structname: 'XCVersionReader'
-                    filename: "XCVersionReader.go"
+                    structname: XCVersionReader
+                    filename: XCVersionReader.go
     github.com/bitrise-io/go-utils/v2/command:
         interfaces:
             Factory:
                 config:
-                    structname: 'CommandFactory'
-                    filename: "CommandFactory.go"
+                    structname: CommandFactory
+                    filename: CommandFactory.go
