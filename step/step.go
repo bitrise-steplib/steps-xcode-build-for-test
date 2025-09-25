@@ -13,17 +13,19 @@ import (
 	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/pathutil"
+	v1pathutil "github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/sliceutil"
+	"github.com/bitrise-io/go-utils/v2/command"
 	v2command "github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	v2log "github.com/bitrise-io/go-utils/v2/log"
-	v2pathutil "github.com/bitrise-io/go-utils/v2/pathutil"
+	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
 	"github.com/bitrise-io/go-xcode/v2/xcconfig"
-	"github.com/bitrise-io/go-xcode/v2/xcpretty"
+	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
+	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 	"github.com/bitrise-io/go-xcode/xcodebuild"
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
@@ -44,6 +46,11 @@ const (
 	codeSignSourceOff     = "off"
 	codeSignSourceAPIKey  = "api-key"
 	codeSignSourceAppleID = "apple-id"
+
+	// Output tools
+	XcbeautifyTool = "xcbeautify"
+	XcodebuildTool = "xcodebuild"
+	XcprettyTool   = "xcpretty"
 )
 
 type Input struct {
@@ -92,7 +99,7 @@ type Config struct {
 	TestPlan               string
 	XCConfig               string
 	XcodebuildOptions      []string
-	XCPretty               bool
+	LogFormatter           string
 	CodesignManager        *codesign.Manager
 	OutputDir              string
 	CompressionLevel       int
@@ -102,47 +109,78 @@ type Config struct {
 }
 
 type XcodebuildBuilder struct {
-	logger       v2log.Logger
-	xcodeproject xcodeproject.XcodeProject
-	pathChecker  v2pathutil.PathChecker
-	pathModifier v2pathutil.PathModifier
-	fileManager  FileManager
+	xcodeCommandRunner xcodecommand.Runner
+	xcodeproject       xcodeproject.XcodeProject
+	logFormatter       string
+	xcodeVersionReader xcodeversion.Reader
+	pathProvider       pathutil.PathProvider
+	pathChecker        pathutil.PathChecker
+	pathModifier       pathutil.PathModifier
+	fileManager        FileManager
+	logger             v2log.Logger
+	cmdFactory         command.Factory
 }
 
-func NewXcodebuildBuilder(logger v2log.Logger, xcodeproject xcodeproject.XcodeProject, pathChecker v2pathutil.PathChecker, pathModifier v2pathutil.PathModifier, fileManager FileManager) XcodebuildBuilder {
+func NewXcodebuildBuilder(
+	xcodeCommandRunner xcodecommand.Runner,
+	logFormatter string,
+	xcodeVersionReader xcodeversion.Reader,
+	pathProvider pathutil.PathProvider,
+	pathChecker pathutil.PathChecker,
+	pathModifier pathutil.PathModifier,
+	fileManager FileManager,
+	logger v2log.Logger,
+	cmdFactory command.Factory,
+) XcodebuildBuilder {
 	return XcodebuildBuilder{
-		logger:       logger,
-		xcodeproject: xcodeproject,
-		pathChecker:  pathChecker,
-		pathModifier: pathModifier,
-		fileManager:  fileManager,
+		xcodeCommandRunner: xcodeCommandRunner,
+		logFormatter:       logFormatter,
+		xcodeVersionReader: xcodeVersionReader,
+		pathProvider:       pathProvider,
+		pathChecker:        pathChecker,
+		pathModifier:       pathModifier,
+		fileManager:        fileManager,
+		logger:             logger,
+		cmdFactory:         cmdFactory,
 	}
 }
 
-func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
+type ConfigParser struct {
+	logger v2log.Logger
+}
+
+func NewConfigParser(
+	logger v2log.Logger,
+) ConfigParser {
+	return ConfigParser{
+		logger: logger,
+	}
+}
+
+func (c ConfigParser) ProcessConfig() (Config, error) {
 	var input Input
 	parser := stepconf.NewInputParser(env.NewRepository())
 	if err := parser.Parse(&input); err != nil {
 		return Config{}, err
 	}
 
-	b.logger.EnableDebugLog(input.VerboseLog)
+	c.logger.EnableDebugLog(input.VerboseLog)
 	log.SetEnableDebugLog(input.VerboseLog)
 
 	stepconf.Print(input)
-	b.logger.Println()
+	c.logger.Println()
 
 	absProjectPath, err := filepath.Abs(input.ProjectPath)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to expand project path (%s): %w", input.ProjectPath, err)
 	}
 
-	absOutputDir, err := pathutil.AbsPath(input.OutputDir)
+	absOutputDir, err := filepath.Abs(input.OutputDir)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to expand output dir (%s): %w", input.OutputDir, err)
 	}
 
-	if exist, err := pathutil.IsPathExists(absOutputDir); err != nil {
+	if exist, err := v1pathutil.IsPathExists(absOutputDir); err != nil {
 		return Config{}, fmt.Errorf("failed to check if output dir exist: %w", err)
 	} else if !exist {
 		if err := os.MkdirAll(absOutputDir, 0777); err != nil {
@@ -154,7 +192,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get xcode version: %w", err)
 	}
-	b.logger.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+	c.logger.Infof("Xcode version: %s (%s)", xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 
 	var swiftPackagesPath string
 	if xcodebuildVersion.MajorVersion >= 11 {
@@ -206,7 +244,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 			APIKeyID:                     input.APIKeyID,
 			APIKeyIssuerID:               input.APIKeyIssuerID,
 			APIKeyEnterpriseAccount:      input.APIKeyEnterpriseAccount,
-		}, xcodebuildVersion.MajorVersion, b.logger, factory, fileManager)
+		}, xcodebuildVersion.MajorVersion, c.logger, factory, fileManager)
 		if err != nil {
 			return Config{}, err
 		}
@@ -221,7 +259,7 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 		TestPlan:               input.TestPlan,
 		XCConfig:               input.XCConfigContent,
 		XcodebuildOptions:      customOptions,
-		XCPretty:               input.LogFormatter == "xcpretty",
+		LogFormatter:           input.LogFormatter,
 		CodesignManager:        codesignManager,
 		OutputDir:              absOutputDir,
 		CompressionLevel:       input.CompressionLevel,
@@ -231,44 +269,23 @@ func (b XcodebuildBuilder) ProcessConfig() (Config, error) {
 	}, nil
 }
 
-func (b XcodebuildBuilder) InstallDependencies(useXCPretty bool) error {
-	if !useXCPretty {
-		return nil
-	}
-
-	b.logger.Println()
-	b.logger.Infof("Checking if output tool (xcpretty) is installed")
-	formatter := xcpretty.NewXcpretty(b.logger)
-
-	installed, err := formatter.IsInstalled()
+func (b XcodebuildBuilder) EnsureDependencies() {
+	logFormatterVersion, err := b.xcodeCommandRunner.CheckInstall()
 	if err != nil {
-		return err
-	}
-
-	if !installed {
-		b.logger.Warnf("xcpretty is not installed")
 		b.logger.Println()
-		b.logger.Printf("Installing xcpretty")
+		b.logger.Errorf("Selected log formatter is unavailable: %s", err)
+		b.logger.Infof("Switching back to xcodebuild log formatter.")
 
-		cmdModelSlice, err := formatter.Install()
-		if err != nil {
-			return fmt.Errorf("failed to create xcpretty install commands: %w", err)
-		}
-
-		for _, cmd := range cmdModelSlice {
-			if err := cmd.Run(); err != nil {
-				return fmt.Errorf("failed to run xcpretty install command (%s): %w", cmd.PrintableCommandArgs(), err)
-			}
-		}
+		b.logFormatter = XcodebuildTool
+		b.xcodeCommandRunner = xcodecommand.NewRawCommandRunner(b.logger, b.cmdFactory)
+		return
 	}
 
-	xcprettyVersion, err := formatter.Version()
-	if err != nil {
-		return fmt.Errorf("failed to get xcpretty version: %w", err)
+	if logFormatterVersion != nil { // raw xcodebuild runner returns nil
+		b.logger.Printf("- log formatter version: %s", logFormatterVersion.String())
 	}
 
-	b.logger.Printf("- xcpretty version: %s", xcprettyVersion.String())
-	return nil
+	return
 }
 
 type RunOut struct {
@@ -317,7 +334,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	xcodeBuildCmd.SetCustomOptions(options)
 
 	if cfg.XCConfig != "" {
-		xcconfigWriter := xcconfig.NewWriter(v2pathutil.NewPathProvider(), fileutil.NewFileManager(), v2pathutil.NewPathChecker(), v2pathutil.NewPathModifier())
+		xcconfigWriter := xcconfig.NewWriter(pathutil.NewPathProvider(), fileutil.NewFileManager(), pathutil.NewPathChecker(), pathutil.NewPathModifier())
 		xcconfigPath, err := xcconfigWriter.Write(cfg.XCConfig)
 		if err != nil {
 			return RunOut{}, err
@@ -330,9 +347,9 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	}
 
 	result := RunOut{}
-	rawXcodebuildOut, err := runCommandWithRetry(xcodeBuildCmd, cfg.XCPretty, cfg.SwiftPackagesPath)
+	rawXcodebuildOut, err := runCommandWithRetry(b.xcodeCommandRunner, cfg.LogFormatter, xcodeBuildCmd, cfg.SwiftPackagesPath, b.logger)
 	// TODO: if output_tool == xcodebuild, the build log is printed to stdout + last couple of lines printed again
-	if err != nil || !cfg.XCPretty {
+	if err != nil || cfg.LogFormatter != XcodebuildTool {
 		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil, b.logger)
 	}
 
@@ -533,12 +550,12 @@ func (b XcodebuildBuilder) findTestBundle(opts findTestBundleOpts) (testBundle, 
 // - filter them for the build's timeframe (so that only the current step generated outputs are considered)
 // - find the built targets and tests dir based on the configuration and destination inputs
 func (b XcodebuildBuilder) fixTestRoot(xctestrunPth string) error {
-	c, err := b.fileManager.ReadFile(xctestrunPth)
+	data, err := b.fileManager.ReadFile(xctestrunPth)
 	if err != nil {
 		return err
 	}
 
-	newC := bytes.Replace(c, []byte("/private__TESTROOT__"), []byte("__TESTROOT__"), -1)
+	newC := bytes.Replace(data, []byte("/private__TESTROOT__"), []byte("__TESTROOT__"), -1)
 
 	return b.fileManager.WriteFile(xctestrunPth, newC, 0666)
 }
@@ -573,7 +590,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 	//	+ Debug-iphonesimulator/
 	//	+ Debug-watchsimulator/
 	for _, builtTestsDir := range entries {
-		if builtTestsDir.IsDir() {
+		if exists, err := b.pathChecker.IsDirExists(builtTestsDir.Name()); exists && err == nil {
 			args = append(args, builtTestsDir.Name())
 		}
 	}

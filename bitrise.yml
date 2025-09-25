@@ -15,9 +15,9 @@ workflows:
   sample:
     envs:
     - TEST_APP_URL: https://github.com/bitrise-samples/sample-apps-ios-simple-objc-with-uitest.git
-    - TEST_APP_BRANCH: renamed-scheme
+    - TEST_APP_BRANCH: master
     - BITRISE_PROJECT_PATH: ios-simple-objc/ios-simple-objc.xcodeproj
-    - BITRISE_SCHEME: renamed_scheme
+    - BITRISE_SCHEME: ios-simple-objc
     steps:
     - script:
         inputs:
@@ -35,7 +35,9 @@ workflows:
         inputs:
         # Inputs with non-default value or using environment variables
         - project_path: ./_tmp/$BITRISE_PROJECT_PATH
-        - scheme: $BITRISE_SCHEME
+        - verbose_log: "yes"
+        - xcodebuild_options: CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+        - destination: "generic/platform=iOS Simulator"
 
   generate_readme:
     steps:

@@ -106,8 +106,23 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 	pathChecker := new(mocks.PathChecker)
 	fileManager := new(mocks.FileManager)
 	pathModifier := pathutil.NewPathModifier()
+	xcodeCommandRunner := new(mocks.XCCommandRunner)
+	logFormatter := "xcpretty"
+	xcodeVersionReader := new(mocks.XCVersionReader)
+	pathProvider := new(mocks.PathProvider)
+	cmdFactory := new(mocks.CommandFactory)
 
-	step := NewXcodebuildBuilder(logger, xcodeproject, pathChecker, pathModifier, fileManager)
+	step := NewXcodebuildBuilder(
+		xcodeCommandRunner,
+		logFormatter,
+		xcodeVersionReader,
+		pathProvider,
+		pathChecker,
+		pathModifier,
+		fileManager,
+		logger,
+		cmdFactory,
+	)
 
 	mocks := testingMocks{
 		logger:       logger,
