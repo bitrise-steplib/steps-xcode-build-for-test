@@ -349,7 +349,7 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	result := RunOut{}
 	rawXcodebuildOut, err := runCommandWithRetry(b.xcodeCommandRunner, b.logFormatter, xcodeBuildCmd, cfg.SwiftPackagesPath, b.logger)
 	// TODO: if output_tool == xcodebuild, the build log is printed to stdout + last couple of lines printed again
-	if err != nil || b.logFormatter != XcodebuildTool {
+	if err != nil || b.logFormatter == XcodebuildTool {
 		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil, b.logger)
 	}
 
