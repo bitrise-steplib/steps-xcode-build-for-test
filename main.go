@@ -1,10 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/bitrise-io/go-steputils/v2/ruby"
+	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/env"
+	"github.com/bitrise-io/go-utils/v2/errorutil"
+	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
+	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
+	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
 )
@@ -12,50 +20,91 @@ import (
 func main() {
 	os.Exit(run())
 }
-
 func run() int {
-	exitCode := 0
-
 	logger := log.NewLogger()
-	xcodebuildBuilder := createXcodebuildBuilder(logger)
-
-	cfg, err := xcodebuildBuilder.ProcessConfig()
+	configParser := createConfigParser(logger)
+	config, err := configParser.ProcessConfig()
 	if err != nil {
-		logger.Errorf("Process config: %s", err)
-
-		exitCode = 1
-		return exitCode
+		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to process Step inputs: %w", err)))
+		return 1
 	}
 
-	if err := xcodebuildBuilder.InstallDependencies(cfg.XCPretty); err != nil {
-		logger.Warnf("Install dependencies: %s", err)
-		logger.Printf("Switching to xcodebuild for output tool")
-		cfg.XCPretty = false
-	}
-
-	result, err := xcodebuildBuilder.Run(cfg)
+	builder, err := createXcodebuildBuilder(logger, config.LogFormatter)
 	if err != nil {
-		logger.Errorf("Run: %s", err)
-		exitCode = 1
+		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to process Step inputs: %w", err)))
+		return 1
 	}
 
-	if err := xcodebuildBuilder.ExportOutputs(step.ExportOpts{
-		OutputDir:        cfg.OutputDir,
-		CompressionLevel: cfg.CompressionLevel,
-		RunOut:           result,
-	}); err != nil {
-		logger.Errorf("Export outputs: %s", err)
+	builder.EnsureDependencies()
+
+	exitCode := 0
+	result, err := builder.Run(config)
+	if err != nil {
+		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to execute Step main logic: %w", err)))
 		exitCode = 1
+		// don't return as step outputs needs to be exported even in case of failure (for example the xcodebuild logs)
+	}
+
+	exportOpts := createExportOptions(config, result)
+	if err := builder.ExportOutputs(exportOpts); err != nil {
+		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to export Step outputs: %w", err)))
+		return 1
 	}
 
 	return exitCode
 }
 
-func createXcodebuildBuilder(logger log.Logger) step.XcodebuildBuilder {
-	xcproject := xcodeproject.NewXcodeProject()
+func createConfigParser(logger log.Logger) step.ConfigParser {
+	return step.NewConfigParser(logger)
+}
+
+func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.XcodebuildBuilder, error) {
+	envRepository := env.NewRepository()
+	pathProvider := pathutil.NewPathProvider()
 	pathChecker := pathutil.NewPathChecker()
 	pathModifier := pathutil.NewPathModifier()
-	fileManager := step.NewFileManager()
+	fileManager := fileutil.NewFileManager()
+	cmdFactory := command.NewFactory(envRepository)
+	xcodeVersionReader := xcodeversion.NewXcodeVersionProvider(cmdFactory)
+	xcodeCommandRunner := xcodecommand.Runner(nil)
+	xcproject := xcodeproject.NewXcodeProject()
 
-	return step.NewXcodebuildBuilder(logger, xcproject, pathChecker, pathModifier, fileManager)
+	switch logFormatter {
+	case step.XcodebuildTool:
+		xcodeCommandRunner = xcodecommand.NewRawCommandRunner(logger, cmdFactory)
+	case step.XcbeautifyTool:
+		xcodeCommandRunner = xcodecommand.NewXcbeautifyRunner(logger, cmdFactory)
+	case step.XcprettyTool:
+		commandLocator := env.NewCommandLocator()
+		rubyCommandFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator)
+		if err != nil {
+			return step.XcodebuildBuilder{}, fmt.Errorf("failed to install xcpretty: %s", err)
+		}
+		rubyEnv := ruby.NewEnvironment(rubyCommandFactory, commandLocator, logger)
+
+		xcodeCommandRunner = xcodecommand.NewXcprettyCommandRunner(logger, cmdFactory, pathChecker, fileManager, rubyCommandFactory, rubyEnv)
+	default:
+		panic(fmt.Sprintf("Unknown log formatter: %s", logFormatter))
+	}
+
+	return step.NewXcodebuildBuilder(
+		xcodeCommandRunner,
+		xcproject,
+		logFormatter,
+		xcodeVersionReader,
+		pathProvider,
+		pathChecker,
+		pathModifier,
+		step.NewFileManager(),
+		logger,
+		cmdFactory,
+	), nil
+}
+
+func createExportOptions(config step.Config, result step.RunOut) step.ExportOpts {
+	return step.ExportOpts{
+		RunOut:           result,
+		OutputDir:        config.OutputDir,
+		CompressionLevel: config.CompressionLevel,
+	}
 }
