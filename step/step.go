@@ -123,6 +123,7 @@ type XcodebuildBuilder struct {
 
 func NewXcodebuildBuilder(
 	xcodeCommandRunner xcodecommand.Runner,
+	xcodeproject xcodeproject.XcodeProject,
 	logFormatter string,
 	xcodeVersionReader xcodeversion.Reader,
 	pathProvider pathutil.PathProvider,
@@ -134,6 +135,7 @@ func NewXcodebuildBuilder(
 ) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		xcodeCommandRunner: xcodeCommandRunner,
+		xcodeproject:       xcodeproject,
 		logFormatter:       logFormatter,
 		xcodeVersionReader: xcodeVersionReader,
 		pathProvider:       pathProvider,
@@ -269,7 +271,7 @@ func (c ConfigParser) ProcessConfig() (Config, error) {
 	}, nil
 }
 
-func (b XcodebuildBuilder) EnsureDependencies() {
+func (b *XcodebuildBuilder) EnsureDependencies() {
 	logFormatterVersion, err := b.xcodeCommandRunner.CheckInstall()
 	if err != nil {
 		b.logger.Println()
@@ -284,8 +286,6 @@ func (b XcodebuildBuilder) EnsureDependencies() {
 	if logFormatterVersion != nil { // raw xcodebuild runner returns nil
 		b.logger.Printf("- log formatter version: %s", logFormatterVersion.String())
 	}
-
-	return
 }
 
 type RunOut struct {
@@ -347,9 +347,9 @@ func (b XcodebuildBuilder) Run(cfg Config) (RunOut, error) {
 	}
 
 	result := RunOut{}
-	rawXcodebuildOut, err := runCommandWithRetry(b.xcodeCommandRunner, cfg.LogFormatter, xcodeBuildCmd, cfg.SwiftPackagesPath, b.logger)
+	rawXcodebuildOut, err := runCommandWithRetry(b.xcodeCommandRunner, b.logFormatter, xcodeBuildCmd, cfg.SwiftPackagesPath, b.logger)
 	// TODO: if output_tool == xcodebuild, the build log is printed to stdout + last couple of lines printed again
-	if err != nil || cfg.LogFormatter != XcodebuildTool {
+	if err != nil || b.logFormatter != XcodebuildTool {
 		printLastLinesOfXcodebuildTestLog(rawXcodebuildOut, err == nil, b.logger)
 	}
 
@@ -590,7 +590,11 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 	//	+ Debug-iphonesimulator/
 	//	+ Debug-watchsimulator/
 	for _, builtTestsDir := range entries {
-		if exists, err := b.pathChecker.IsDirExists(builtTestsDir.Name()); exists && err == nil {
+		abspath, err := filepath.Abs(builtTestsDir.Name())
+		if err != nil {
+			continue
+		}
+		if exists, err := b.pathChecker.IsDirExists(abspath); exists && err == nil {
 			args = append(args, builtTestsDir.Name())
 		}
 	}

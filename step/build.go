@@ -27,7 +27,7 @@ func runCommandWithRetry(xcodeCommandRunner xcodecommand.Runner, logFormatter st
 
 func runCommand(xcodeCommandRunner xcodecommand.Runner, logFormatter string, cmd *xcodebuild.CommandBuilder, logger log.Logger) (string, error) {
 	output, err := xcodeCommandRunner.Run("", cmd.CommandArgs(), []string{})
-	if logFormatter == XcodebuildTool || err != nil {
+	if logFormatter != XcodebuildTool || err != nil {
 		printLastLinesOfXcodebuildLog(logger, string(output.RawOut), err == nil)
 	}
 

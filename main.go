@@ -14,6 +14,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
 	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
+	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
 )
 
 func main() {
@@ -66,6 +67,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.Xcode
 	cmdFactory := command.NewFactory(envRepository)
 	xcodeVersionReader := xcodeversion.NewXcodeVersionProvider(cmdFactory)
 	xcodeCommandRunner := xcodecommand.Runner(nil)
+	xcproject := xcodeproject.NewXcodeProject()
 
 	switch logFormatter {
 	case step.XcodebuildTool:
@@ -74,19 +76,20 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.Xcode
 		xcodeCommandRunner = xcodecommand.NewXcbeautifyRunner(logger, cmdFactory)
 	case step.XcprettyTool:
 		commandLocator := env.NewCommandLocator()
-		rubyComamndFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator)
+		rubyCommandFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator)
 		if err != nil {
 			return step.XcodebuildBuilder{}, fmt.Errorf("failed to install xcpretty: %s", err)
 		}
-		rubyEnv := ruby.NewEnvironment(rubyComamndFactory, commandLocator, logger)
+		rubyEnv := ruby.NewEnvironment(rubyCommandFactory, commandLocator, logger)
 
-		xcodeCommandRunner = xcodecommand.NewXcprettyCommandRunner(logger, cmdFactory, pathChecker, fileManager, rubyComamndFactory, rubyEnv)
+		xcodeCommandRunner = xcodecommand.NewXcprettyCommandRunner(logger, cmdFactory, pathChecker, fileManager, rubyCommandFactory, rubyEnv)
 	default:
 		panic(fmt.Sprintf("Unknown log formatter: %s", logFormatter))
 	}
 
 	return step.NewXcodebuildBuilder(
 		xcodeCommandRunner,
+		xcproject,
 		logFormatter,
 		xcodeVersionReader,
 		pathProvider,

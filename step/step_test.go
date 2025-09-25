@@ -114,6 +114,7 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 
 	step := NewXcodebuildBuilder(
 		xcodeCommandRunner,
+		xcodeproject,
 		logFormatter,
 		xcodeVersionReader,
 		pathProvider,
