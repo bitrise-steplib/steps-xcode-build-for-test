@@ -48,10 +48,12 @@ source_code_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test
 support_url: https://github.com/bitrise-steplib/steps-xcode-build-for-test/issues
 
 project_type_tags:
-- ios
-- react-native
 - cordova
+- flutter
 - ionic
+- ios
+- kotlin-multiplatform
+- react-native
 
 type_tags:
 - build
