@@ -119,6 +119,7 @@ type XcodebuildBuilder struct {
 	fileManager        FileManager
 	logger             v2log.Logger
 	cmdFactory         command.Factory
+	envRepostiory      env.Repository
 }
 
 func NewXcodebuildBuilder(
@@ -132,6 +133,7 @@ func NewXcodebuildBuilder(
 	fileManager FileManager,
 	logger v2log.Logger,
 	cmdFactory command.Factory,
+	envRepository env.Repository,
 ) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		xcodeCommandRunner: xcodeCommandRunner,
@@ -144,6 +146,7 @@ func NewXcodebuildBuilder(
 		fileManager:        fileManager,
 		logger:             logger,
 		cmdFactory:         cmdFactory,
+		envRepostiory:      envRepository,
 	}
 }
 
@@ -159,9 +162,9 @@ func NewConfigParser(
 	}
 }
 
-func (c ConfigParser) ProcessConfig() (Config, error) {
+func (c ConfigParser) ProcessConfig(envRepository env.Repository) (Config, error) {
 	var input Input
-	parser := stepconf.NewInputParser(env.NewRepository())
+	parser := stepconf.NewInputParser(envRepository)
 	if err := parser.Parse(&input); err != nil {
 		return Config{}, err
 	}
@@ -222,7 +225,7 @@ func (c ConfigParser) ProcessConfig() (Config, error) {
 
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
-		factory := v2command.NewFactory(env.NewRepository())
+		factory := v2command.NewFactory(envRepository)
 		fileManager := fileutil.NewFileManager()
 
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
@@ -246,7 +249,7 @@ func (c ConfigParser) ProcessConfig() (Config, error) {
 			APIKeyID:                     input.APIKeyID,
 			APIKeyIssuerID:               input.APIKeyIssuerID,
 			APIKeyEnterpriseAccount:      input.APIKeyEnterpriseAccount,
-		}, xcodebuildVersion.MajorVersion, c.logger, factory, fileManager)
+		}, xcodebuildVersion.MajorVersion, c.logger, factory, fileManager, envRepository)
 		if err != nil {
 			return Config{}, err
 		}

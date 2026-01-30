@@ -7,6 +7,7 @@ import (
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign"
@@ -43,7 +44,7 @@ type CodesignManagerOpts struct {
 	APIKeyEnterpriseAccount      bool
 }
 
-func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager) (codesign.Manager, error) {
+func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager, envRepository env.Repository) (codesign.Manager, error) {
 	var authType codesign.AuthType
 	switch managerOpts.CodeSigningAuthSource {
 	case codeSignSourceAppleID:
@@ -102,11 +103,14 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		IsVerboseLog:               managerOpts.VerboseLog,
 	}
 
-	project, err := projectmanager.NewProject(projectmanager.InitParams{
+	projectFactory := projectmanager.NewFactory(logger, envRepository, projectmanager.BuildActionBuild)
+
+	project, err := projectFactory.Create(projectmanager.InitParams{
 		ProjectOrWorkspacePath: managerOpts.ProjectPath,
 		SchemeName:             managerOpts.Scheme,
 		ConfigurationName:      managerOpts.Configuration,
 	})
+
 	if err != nil {
 		return codesign.Manager{}, err
 	}

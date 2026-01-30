@@ -21,15 +21,16 @@ func main() {
 	os.Exit(run())
 }
 func run() int {
+	envRepository := env.NewRepository()
 	logger := log.NewLogger()
 	configParser := createConfigParser(logger)
-	config, err := configParser.ProcessConfig()
+	config, err := configParser.ProcessConfig(envRepository)
 	if err != nil {
 		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to process Step inputs: %w", err)))
 		return 1
 	}
 
-	builder, err := createXcodebuildBuilder(logger, config.LogFormatter)
+	builder, err := createXcodebuildBuilder(logger, config.LogFormatter, envRepository)
 	if err != nil {
 		logger.Errorf("%s", errorutil.FormattedError(fmt.Errorf("failed to process Step inputs: %w", err)))
 		return 1
@@ -58,8 +59,7 @@ func createConfigParser(logger log.Logger) step.ConfigParser {
 	return step.NewConfigParser(logger)
 }
 
-func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.XcodebuildBuilder, error) {
-	envRepository := env.NewRepository()
+func createXcodebuildBuilder(logger log.Logger, logFormatter string, envRepository env.Repository) (step.XcodebuildBuilder, error) {
 	pathProvider := pathutil.NewPathProvider()
 	pathChecker := pathutil.NewPathChecker()
 	pathModifier := pathutil.NewPathModifier()
@@ -98,6 +98,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.Xcode
 		step.NewFileManager(),
 		logger,
 		cmdFactory,
+		envRepository,
 	), nil
 }
 

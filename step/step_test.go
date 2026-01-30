@@ -111,6 +111,7 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 	xcodeVersionReader := new(mocks.XCVersionReader)
 	pathProvider := new(mocks.PathProvider)
 	cmdFactory := new(mocks.CommandFactory)
+	envRepository := new(mocks.Repository)
 
 	step := NewXcodebuildBuilder(
 		xcodeCommandRunner,
@@ -123,6 +124,7 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 		fileManager,
 		logger,
 		cmdFactory,
+		envRepository,
 	)
 
 	mocks := testingMocks{
