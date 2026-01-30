@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bitrise-io/go-steputils/output"
 	"github.com/bitrise-io/go-steputils/tools"
+	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/log"
 	v1pathutil "github.com/bitrise-io/go-utils/pathutil"
@@ -119,6 +119,7 @@ type XcodebuildBuilder struct {
 	fileManager        FileManager
 	logger             v2log.Logger
 	cmdFactory         command.Factory
+	exporter           export.Exporter
 }
 
 func NewXcodebuildBuilder(
@@ -132,6 +133,7 @@ func NewXcodebuildBuilder(
 	fileManager FileManager,
 	logger v2log.Logger,
 	cmdFactory command.Factory,
+	exporter export.Exporter,
 ) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		xcodeCommandRunner: xcodeCommandRunner,
@@ -144,6 +146,7 @@ func NewXcodebuildBuilder(
 		fileManager:        fileManager,
 		logger:             logger,
 		cmdFactory:         cmdFactory,
+		exporter:           exporter,
 	}
 }
 
@@ -562,7 +565,7 @@ func (b XcodebuildBuilder) fixTestRoot(xctestrunPth string) error {
 
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
 	xcodebuildLogPath := filepath.Join(outputDir, xcodebuildLogBaseName)
-	if err := output.ExportOutputFileContent(xcodebuildLog, xcodebuildLogPath, xcodebuildLogPathEnvKey); err != nil {
+	if err := b.exporter.ExportStringToFileOutput(xcodebuildLogPathEnvKey, xcodebuildLog, xcodebuildLogPath); err != nil {
 		return fmt.Errorf("failed to export %s, error: %w", xcodebuildLogPathEnvKey, err)
 	}
 	b.logger.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
@@ -612,7 +615,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 		}
 		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
 	}
-	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
+	if err := b.exporter.ExportOutputFile(testBundleZipPathEnvKey, testBundleZipPth, testBundleZipPth); err != nil {
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
@@ -621,7 +624,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 	if len(xctestrunPths) > 1 {
 		b.logger.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", defaultXctestrunPth)
 	}
-	if err := output.ExportOutputFile(defaultXctestrunPth, defaultXctestrunPth, xctestrunPathEnvKey); err != nil {
+	if err := b.exporter.ExportOutputFile(xctestrunPathEnvKey, defaultXctestrunPth, defaultXctestrunPth); err != nil {
 		return err
 	}
 	b.logger.Donef("The built xctestrun file is available in %s env: %s", xctestrunPathEnvKey, defaultXctestrunPth)
