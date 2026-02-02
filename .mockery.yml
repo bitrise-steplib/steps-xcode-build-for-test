@@ -1,8 +1,8 @@
 dir: mocks
-filename: "{{.InterfaceName}}.go"
+filename: "{{ .InterfaceName }}.go"
 pkgname: mocks
 formatter: goimports
-structname: "{{.InterfaceName}}"
+structname: "{{ .InterfaceName }}"
 template: testify
 packages:
     github.com/bitrise-io/go-utils/v2/log:
@@ -36,3 +36,6 @@ packages:
                 config:
                     structname: CommandFactory
                     filename: CommandFactory.go
+    github.com/bitrise-io/go-utils/v2/env:
+        interfaces:
+            Repository:
