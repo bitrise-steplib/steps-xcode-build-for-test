@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/bitrise-io/go-utils/httputil"
-	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/retry"
+	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/retryhttp"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-querystring/query"
 	"github.com/hashicorp/go-retryablehttp"
@@ -69,23 +69,39 @@ type Client struct {
 	common       service // Reuse a single struct instead of allocating one for each service on the heap.
 	Provisioning *ProvisioningService
 
+	logger  log.Logger
 	tracker Tracker
 }
 
 // NewRetryableHTTPClient create a new http client with retry settings.
-func NewRetryableHTTPClient() *http.Client {
-	client := retry.NewHTTPClient()
+func NewRetryableHTTPClient(logger log.Logger, tracker Tracker) *http.Client {
+	client := retryhttp.NewClient(logger)
+
+	trackingTransport := newTrackingRoundTripper(client.HTTPClient.Transport, tracker)
+	client.HTTPClient.Transport = trackingTransport
+
+	// RequestLogHook is called before each retry (attemptNum > 0 for retries, 0 for initial request).
+	// We mark retry attempts in the request context so RoundTrip can track which attempts are retries.
+	// We use pointer dereference (*req = *...) to modify the request in-place because RequestLogHook
+	// doesn't return a value - it modifies the request through side effects. This updates the request's
+	// context field, which will be present when RoundTrip is called immediately after.
+	client.RequestLogHook = func(_ retryablehttp.Logger, req *http.Request, attemptNum int) {
+		if attemptNum > 0 {
+			*req = *trackingTransport.markAsRetry(req)
+		}
+	}
+
 	client.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
-			log.Debugf("Received HTTP 401 (Unauthorized), retrying request...")
+			logger.Debugf("Received HTTP 401 (Unauthorized), retrying request...")
 			return true, nil
 		}
 
 		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			var apiError *ErrorResponse
-			if ok := errors.As(checkResponse(resp), &apiError); ok {
+			if ok := errors.As(checkResponse(logger, resp), &apiError); ok {
 				if apiError.IsRequiredAgreementMissingOrExpired() {
-					log.Warnf("Received error FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED (status 403), retrying request...")
+					logger.Warnf("Received error FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED (status 403), retrying request...")
 					return true, nil
 				}
 			}
@@ -103,23 +119,24 @@ func NewRetryableHTTPClient() *http.Client {
 				message += ", retrying the request..."
 			}
 
-			log.Warnf(message)
+			logger.Warnf(message)
 
 			return true, nil
 		}
 
 		shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 		if shouldRetry && resp != nil {
-			log.Debugf("Retry network error: %d", resp.StatusCode)
+			logger.Debugf("Retry network error: %d", resp.StatusCode)
 		}
 
 		return shouldRetry, err
 	}
+
 	return client.StandardClient()
 }
 
 // NewClient creates a new client
-func NewClient(httpClient HTTPClient, keyID, issuerID string, privateKey []byte, isEnterpise bool, tracker Tracker) *Client {
+func NewClient(httpClient HTTPClient, keyID, issuerID string, privateKey []byte, isEnterpise bool, logger log.Logger, tracker Tracker) *Client {
 	targetURL := clientBaseURL
 	targetAudience := tokenAudience
 	if isEnterpise {
@@ -140,6 +157,7 @@ func NewClient(httpClient HTTPClient, keyID, issuerID string, privateKey []byte,
 
 		client:  httpClient,
 		BaseURL: baseURL,
+		logger:  logger,
 		tracker: tracker,
 	}
 	c.common.client = c
@@ -157,9 +175,9 @@ func (c *Client) ensureSignedToken() (string, error) {
 			return c.signedToken, nil
 		}
 
-		log.Debugf("JWT token is invalid: %s, regenerating...", err)
+		c.logger.Debugf("JWT token is invalid: %s, regenerating...", err)
 	} else {
-		log.Debugf("Generating JWT token")
+		c.logger.Debugf("Generating JWT token")
 	}
 
 	c.token = createToken(c.keyID, c.issuerID, c.audience)
@@ -221,7 +239,7 @@ func (c *Client) newRequest(method, endpoint string, body interface{}) (*http.Re
 	return req, nil
 }
 
-func checkResponse(r *http.Response) error {
+func checkResponse(logger log.Logger, r *http.Response) error {
 	if r.StatusCode >= 200 && r.StatusCode <= 299 {
 		return nil
 	}
@@ -230,7 +248,7 @@ func checkResponse(r *http.Response) error {
 	data, err := io.ReadAll(r.Body)
 	if err == nil && data != nil {
 		if err := json.Unmarshal(data, errorResponse); err != nil {
-			log.Errorf("Failed to unmarshal response (%s): %s", string(data), err)
+			logger.Errorf("Failed to unmarshal response (%s): %s", string(data), err)
 		}
 	}
 	return errorResponse
@@ -239,14 +257,12 @@ func checkResponse(r *http.Response) error {
 // Debugf ...
 func (c *Client) Debugf(format string, v ...interface{}) {
 	if c.EnableDebugLogs {
-		log.Debugf(format, v...)
+		c.logger.Debugf(format, v...)
 	}
 }
 
 // Do ...
 func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
-	startTime := time.Now()
-
 	c.Debugf("Request:")
 	if c.EnableDebugLogs {
 		if err := httputil.PrintRequest(req); err != nil {
@@ -255,7 +271,6 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	}
 
 	resp, err := c.client.Do(req)
-	duration := time.Since(startTime)
 
 	c.Debugf("Response:")
 	if c.EnableDebugLogs {
@@ -271,17 +286,14 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil {
-			log.Warnf("Failed to close response body: %s", cerr)
+			c.logger.Warnf("Failed to close response body: %s", cerr)
 		}
 	}()
 
-	if err := checkResponse(resp); err != nil {
-		c.tracker.TrackAPIRequest(req.Method, req.URL.Host, req.URL.Path, resp.StatusCode, duration)
+	if err := checkResponse(c.logger, resp); err != nil {
 		c.tracker.TrackAPIError(req.Method, req.URL.Host, req.URL.Path, resp.StatusCode, err.Error())
 		return resp, err
 	}
-
-	c.tracker.TrackAPIRequest(req.Method, req.URL.Host, req.URL.Path, resp.StatusCode, duration)
 
 	if v != nil {
 		decErr := json.NewDecoder(resp.Body).Decode(v)

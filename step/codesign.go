@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
-	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign"
@@ -102,7 +102,9 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		IsVerboseLog:               managerOpts.VerboseLog,
 	}
 
-	project, err := projectmanager.NewProject(projectmanager.InitParams{
+	envRepo := env.NewRepository()
+	factory := projectmanager.NewFactory(logger, envRepo, projectmanager.BuildActionArchive)
+	project, err := factory.Create(projectmanager.InitParams{
 		ProjectOrWorkspacePath: managerOpts.ProjectPath,
 		SchemeName:             managerOpts.Scheme,
 		ConfigurationName:      managerOpts.Configuration,
@@ -110,8 +112,6 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 	if err != nil {
 		return codesign.Manager{}, err
 	}
-
-	client := retry.NewHTTPClient().StandardClient()
 
 	var testDevices []devportalservice.TestDevice
 	if managerOpts.TestDeviceListPath != "" {
@@ -128,8 +128,8 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		appleAuthCredentials,
 		testDevices,
 		devPortalClientFactory,
-		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, client),
-		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, client),
+		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, logger),
+		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, logger),
 		codesignasset.NewWriter(codesignConfig.Keychain),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		localcodesignasset.NewProvisioningProfileConverter(),

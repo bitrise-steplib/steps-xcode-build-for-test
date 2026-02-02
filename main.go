@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-steputils/v2/ruby"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
@@ -98,6 +99,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string) (step.Xcode
 		step.NewFileManager(),
 		logger,
 		cmdFactory,
+		export.NewExporter(cmdFactory),
 	), nil
 }
 
