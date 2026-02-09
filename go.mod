@@ -13,7 +13,7 @@ require (
 require (
 	github.com/bitrise-io/go-pkcs12 v0.1.0 // indirect
 	github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10 // indirect
-	github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.43.0.20260130151049-a2ff37a6874f
+	github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.43.0.20260209133848-10c0503ac776
 	github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.31
 	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.77
 	github.com/davecgh/go-spew v1.1.1 // indirect

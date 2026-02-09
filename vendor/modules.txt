@@ -9,9 +9,10 @@ github.com/bitrise-io/go-plist
 ## explicit; go 1.15
 github.com/bitrise-io/go-steputils/cache
 github.com/bitrise-io/go-steputils/tools
-# github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.43.0.20260130151049-a2ff37a6874f
+# github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.43.0.20260209133848-10c0503ac776
 ## explicit; go 1.17
 github.com/bitrise-io/go-steputils/v2/export
+github.com/bitrise-io/go-steputils/v2/internal
 github.com/bitrise-io/go-steputils/v2/ruby
 github.com/bitrise-io/go-steputils/v2/stepconf
 # github.com/bitrise-io/go-utils v1.0.15

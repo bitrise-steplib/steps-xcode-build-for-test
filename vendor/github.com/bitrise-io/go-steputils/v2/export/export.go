@@ -149,7 +149,7 @@ func (e *Exporter) ExportStringToFileOutput(envKey, content, dst string) error {
 	return e.ExportOutputFile(envKey, dst, dst)
 }
 
-// ExportStringToFileOutputAndReturnLastNLines is similar to ExportOutputFileContent but it also returns the
+// ExportStringToFileOutputAndReturnLastNLines is similar to ExportStringToFileOutput but it also returns the
 // last N lines of the content.
 func (e *Exporter) ExportStringToFileOutputAndReturnLastNLines(envKey, content, dst string, lines int) (string, error) {
 	if err := e.ExportStringToFileOutput(envKey, content, dst); err != nil {

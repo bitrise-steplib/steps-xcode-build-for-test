@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bitrise-io/go-steputils/v2/internal"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 )
 
@@ -28,42 +29,35 @@ type FileManager interface {
 	fileutil.FileManager
 
 	CopyFile(src, dst string) error
-	CopyFileFS(fsys fs.FS, src, dst string) error
 	CopyDir(src, dst string) error
-	CopyFS(dir string, fsys fs.FS) error
-
-	Lchown(path string, uid, gid int) error
-	CopyOwner(srcInfo os.FileInfo, dstPath string) error
-	Chtimes(path string, atime, mtime time.Time) error
-	CopyTimes(srcInfo os.FileInfo, dstPath string) error
-	Chmod(path string, mode os.FileMode) error
-	CopyMode(srcInfo os.FileInfo, dstPath string) error
 	Lstat(path string) (os.FileInfo, error)
-	Sys(info os.FileInfo) (SysStat, error)
-
 	LastNLines(s string, n int) string
 }
 
 // NewFileManager creates a new FileManager instance.
 func NewFileManager() FileManager {
-	return &fileManager{wrapped: fileutil.NewFileManager()}
+	return &fileManager{
+		wrapped: fileutil.NewFileManager(),
+		osProxy: internal.RealOS{},
+	}
 }
 
 // fileManager implements FileManager interface.
 type fileManager struct {
 	wrapped fileutil.FileManager
+	osProxy internal.OsProxy
 }
 
 // CopyFile copies a single file from src to dst.
 func (fm *fileManager) CopyFile(src, dst string) error {
 	srcDir := filepath.Dir(src)
-	fsys := os.DirFS(srcDir)
+	fsys := fm.osProxy.DirFS(srcDir)
 
-	return fm.CopyFileFS(fsys, filepath.Base(src), dst)
+	return fm.copyFileFS(fsys, filepath.Base(src), dst)
 }
 
 // CopyFileFS is the excerpt from fs.CopyFS that copies a single file from fs.FS to dst path.
-func (fm *fileManager) CopyFileFS(fsys fs.FS, src, dst string) error {
+func (fm *fileManager) copyFileFS(fsys fs.FS, src, dst string) error {
 	r, err := fsys.Open(src)
 	if err != nil {
 		return err
@@ -73,7 +67,7 @@ func (fm *fileManager) CopyFileFS(fsys fs.FS, src, dst string) error {
 	if err != nil {
 		return err
 	}
-	w, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0777)
+	w, err := fm.osProxy.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0777)
 	if err != nil {
 		return err
 	}
@@ -85,26 +79,20 @@ func (fm *fileManager) CopyFileFS(fsys fs.FS, src, dst string) error {
 	if err := w.Sync(); err != nil {
 		return &fs.PathError{Op: "Sync", Path: dst, Err: err}
 	}
-	if err := fm.CopyOwner(info, dst); err != nil {
-		return &fs.PathError{Op: "CopyOwner", Path: dst, Err: err}
+	if err := fm.copyOwner(info, dst); err != nil {
+		return &fs.PathError{Op: "copyOwner", Path: dst, Err: err}
 	}
-	if err := fm.CopyMode(info, dst); err != nil {
-		return &fs.PathError{Op: "CopyMode", Path: dst, Err: err}
+	if err := fm.copyMode(info, dst); err != nil {
+		return &fs.PathError{Op: "copyMode", Path: dst, Err: err}
 	}
-	if err := fm.CopyTimes(info, dst); err != nil {
-		return &fs.PathError{Op: "CopyTimes", Path: dst, Err: err}
+	if err := fm.copyTimes(info, dst); err != nil {
+		return &fs.PathError{Op: "copyTimes", Path: dst, Err: err}
 	}
 
 	return nil
 }
 
 // CopyDir is a convenience method for copying a directory from src to dst.
-// Note: symlinks are preserved during the copy operation
-func (fm *fileManager) CopyDir(src, dst string) error {
-	return fm.CopyFS(dst, os.DirFS(src))
-}
-
-// CopyFS is a local copy of fileutil.FileManager.CopyFS
 //
 // A copy of os.CopyFS because it messes up permissions when copying files
 // from fs.FS
@@ -124,18 +112,16 @@ func (fm *fileManager) CopyDir(src, dst string) error {
 // while CopyFS is running are not guaranteed to be copied.
 //
 // Copying stops at and returns the first error encountered.
-func (fm *fileManager) CopyFS(dir string, fsys fs.FS) error {
+// Note: symlinks are preserved during the copy operation
+func (fm *fileManager) CopyDir(src, dst string) error {
+	fsys := fm.osProxy.DirFS(src)
 	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		fpath, err := filepath.Localize(path)
-		if err != nil {
-			return err
-		}
-		newPath := filepath.Join(dir, fpath)
-		info, err := fs.Lstat(fsys, path)
+		newPath := filepath.Join(dst, path)
+		info, err := d.Info()
 
 		// This is not exhausetive in the original implementation either.
 		// nolint:exhaustive
@@ -144,32 +130,33 @@ func (fm *fileManager) CopyFS(dir string, fsys fs.FS) error {
 			if err != nil {
 				return err
 			}
-			if err := os.MkdirAll(newPath, 0777); err != nil {
+			if err := fm.osProxy.MkdirAll(newPath, 0777); err != nil {
 				return err
 			}
-			if err := fm.CopyOwner(info, newPath); err != nil {
+			if err := fm.copyOwner(info, newPath); err != nil {
 				return err
 			}
-			if err := fm.CopyMode(info, newPath); err != nil {
+			if err := fm.copyMode(info, newPath); err != nil {
 				return err
 			}
-			return fm.CopyTimes(info, newPath)
+			return fm.copyTimes(info, newPath)
 
 		case os.ModeSymlink:
-			target, err := fs.ReadLink(fsys, path)
+			srcPath := filepath.Join(src, path)
+			target, err := fm.osProxy.Readlink(srcPath)
 			if err != nil {
 				return err
 			}
-			if err := os.Symlink(target, newPath); err != nil {
+			if err := fm.osProxy.Symlink(target, newPath); err != nil {
 				return err
 			}
-			if err := fm.CopyOwner(info, newPath); err != nil {
+			if err := fm.copyOwner(info, newPath); err != nil {
 				return err
 			}
-			return fm.CopyTimes(info, newPath)
+			return fm.copyTimes(info, newPath)
 
 		case 0:
-			return fm.CopyFileFS(fsys, path, newPath)
+			return fm.copyFileFS(fsys, path, newPath)
 
 		default:
 			return &os.PathError{Op: "CopyFS", Path: path, Err: os.ErrInvalid}
@@ -177,13 +164,13 @@ func (fm *fileManager) CopyFS(dir string, fsys fs.FS) error {
 	})
 }
 
-// Lchown ...
-func (fm *fileManager) Lchown(path string, uid, gid int) error {
-	return os.Lchown(path, uid, gid)
+// lchown ...
+func (fm *fileManager) lchown(path string, uid, gid int) error {
+	return fm.osProxy.Lchown(path, uid, gid)
 }
 
-// CopyOwner invokes Lchown to copy ownership from srcInfo to dstPath.
-func (fm *fileManager) CopyOwner(srcInfo os.FileInfo, dstPath string) error {
+// copyOwner invokes lchown to copy ownership from srcInfo to dstPath.
+func (fm *fileManager) copyOwner(srcInfo os.FileInfo, dstPath string) error {
 	if runtime.GOOS == "windows" {
 		return nil
 	}
@@ -192,33 +179,33 @@ func (fm *fileManager) CopyOwner(srcInfo os.FileInfo, dstPath string) error {
 		return fmt.Errorf("missing Stat_t for symlink %s", dstPath)
 	}
 	// os.Lchown affects the link itself when given the link path
-	if err := fm.Lchown(dstPath, int(stat.Uid), int(stat.Gid)); err != nil {
+	if err := fm.lchown(dstPath, int(stat.Uid), int(stat.Gid)); err != nil {
 		return fmt.Errorf("lchown(symlink) %s: %w", dstPath, err)
 	}
 	return nil
 }
 
-// Chtimes ...
-func (fm *fileManager) Chtimes(path string, atime, mtime time.Time) error {
-	return os.Chtimes(path, atime, mtime)
+// chtimes ...
+func (fm *fileManager) chtimes(path string, atime, mtime time.Time) error {
+	return fm.osProxy.Chtimes(path, atime, mtime)
 }
 
-// CopyTimes invokes Chtimes to copy access and modification times from srcInfo to dstPath.
-func (fm *fileManager) CopyTimes(srcInfo os.FileInfo, dstPath string) error {
+// copyTimes invokes chtimes to copy access and modification times from srcInfo to dstPath.
+func (fm *fileManager) copyTimes(srcInfo os.FileInfo, dstPath string) error {
 	if runtime.GOOS == "windows" {
 		// On Windows we only set mod time (atime setting optional)
-		if err := fm.Chtimes(dstPath, srcInfo.ModTime(), srcInfo.ModTime()); err != nil {
+		if err := fm.chtimes(dstPath, srcInfo.ModTime(), srcInfo.ModTime()); err != nil {
 			// ignore or return depending on policy
 			return fmt.Errorf("chtimes %s: %w", dstPath, err)
 		}
 
 	} else {
 		if stat, ok := srcInfo.Sys().(*syscall.Stat_t); ok {
-			// set times (for non-symlink paths we use os.Chtimes)
+			// set times (for non-symlink paths we use os.chtimes)
 			if srcInfo.Mode()&os.ModeSymlink == 0 {
 				atime := time.Unix(stat.Atimespec.Sec, stat.Atimespec.Nsec)
 				mtime := srcInfo.ModTime()
-				if err := fm.Chtimes(dstPath, atime, mtime); err != nil {
+				if err := fm.chtimes(dstPath, atime, mtime); err != nil {
 					return fmt.Errorf("chtimes %s: %w", dstPath, err)
 				}
 			}
@@ -227,27 +214,19 @@ func (fm *fileManager) CopyTimes(srcInfo os.FileInfo, dstPath string) error {
 	return nil
 }
 
-// Chmod ...
-func (fm *fileManager) Chmod(path string, mode os.FileMode) error {
-	return os.Chmod(path, mode)
+// chmod ...
+func (fm *fileManager) chmod(path string, mode os.FileMode) error {
+	return fm.osProxy.Chmod(path, mode)
 }
 
-// CopyMode invokes Chmod to copy file mode from srcInfo to dstPath.
-func (fm *fileManager) CopyMode(srcInfo os.FileInfo, dstPath string) error {
-	return fm.Chmod(dstPath, srcInfo.Mode())
+// copyMode invokes chmod to copy file mode from srcInfo to dstPath.
+func (fm *fileManager) copyMode(srcInfo os.FileInfo, dstPath string) error {
+	return fm.chmod(dstPath, srcInfo.Mode())
 }
 
-// Lstat ...
+// Lstat implements FileManager by delegating to os.Lstat via the osProxy.
 func (fm *fileManager) Lstat(path string) (os.FileInfo, error) {
-	return os.Lstat(path)
-}
-
-// Sys ...
-func (fm *fileManager) Sys(info os.FileInfo) (SysStat, error) {
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		return SysStat{Uid: int(stat.Uid), Gid: int(stat.Gid)}, nil
-	}
-	return SysStat{}, fmt.Errorf("failed to extract sys info for %s", info.Name())
+	return fm.osProxy.Lstat(path)
 }
 
 // LastNLines returns the last n lines of the given string s.
