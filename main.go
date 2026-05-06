@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/bitrise-io/bitrise-build-cache-cli/v2/pkg/reactnative/wrap"
 	"github.com/bitrise-io/go-steputils/v2/ruby"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
@@ -69,11 +71,20 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string, envReposito
 	xcodeCommandRunner := xcodecommand.Runner(nil)
 	xcproject := xcodeproject.NewXcodeProject()
 
+	// Only the factory handed to the xcodecommand runner gets wrapped — codesign,
+	// project readers, and other cmdFactory consumers keep invoking binaries
+	// directly.
+	det := wrap.Detect(context.Background(), wrap.DetectParams{Logger: logger})
+	if det.ReactNativeEnabled {
+		logger.Infof("Bitrise Build Cache: React Native cache active — wrapping xcodebuild with %s", det.CLIPath)
+	}
+	runnerCmdFactory := wrap.NewWrappingCommandFactory(cmdFactory, det, "xcodebuild")
+
 	switch logFormatter {
 	case step.XcodebuildTool:
-		xcodeCommandRunner = xcodecommand.NewRawCommandRunner(logger, cmdFactory)
+		xcodeCommandRunner = xcodecommand.NewRawCommandRunner(logger, runnerCmdFactory)
 	case step.XcbeautifyTool:
-		xcodeCommandRunner = xcodecommand.NewXcbeautifyRunner(logger, cmdFactory)
+		xcodeCommandRunner = xcodecommand.NewXcbeautifyRunner(logger, runnerCmdFactory)
 	case step.XcprettyTool:
 		commandLocator := env.NewCommandLocator()
 		rubyCommandFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator)
@@ -82,7 +93,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string, envReposito
 		}
 		rubyEnv := ruby.NewEnvironment(rubyCommandFactory, commandLocator, logger)
 
-		xcodeCommandRunner = xcodecommand.NewXcprettyCommandRunner(logger, cmdFactory, pathChecker, fileManager, rubyCommandFactory, rubyEnv)
+		xcodeCommandRunner = xcodecommand.NewXcprettyCommandRunner(logger, runnerCmdFactory, pathChecker, fileManager, rubyCommandFactory, rubyEnv)
 	default:
 		panic(fmt.Sprintf("Unknown log formatter: %s", logFormatter))
 	}
