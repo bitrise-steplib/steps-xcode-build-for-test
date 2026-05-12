@@ -44,7 +44,12 @@ workflows:
     - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
     steps:
     - bundle::cleanup_profiles: { }
-    - certificate-and-profile-installer: { }
+    - certificate-and-profile-installer:
+        inputs:
+        - certificate_url: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+        - certificate_passphrase: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+        - provisioning_profile_url: $BITFALL_APPLE_PROVISIONING_PROFILE_URL_LIST
+        - install_defaults: "no"
     - bundle::run_step_test: { }
 
   test_fallback_manual_signing:

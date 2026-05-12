@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
-	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
@@ -115,8 +114,6 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		return codesign.Manager{}, err
 	}
 
-	client := retry.NewHTTPClient().StandardClient()
-
 	var testDevices []devportalservice.TestDevice
 	if managerOpts.TestDeviceListPath != "" {
 		testDevices, err = devportalservice.ParseTestDevicesFromFile(managerOpts.TestDeviceListPath, time.Now())
@@ -132,9 +129,9 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		appleAuthCredentials,
 		testDevices,
 		devPortalClientFactory,
-		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, client),
-		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, client),
-		codesignasset.NewWriter(codesignConfig.Keychain),
+		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, logger),
+		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, logger),
+		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, int64(xcodeMajorVersion)),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		localcodesignasset.NewProvisioningProfileConverter(),
 		project,

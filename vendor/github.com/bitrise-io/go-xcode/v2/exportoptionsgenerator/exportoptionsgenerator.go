@@ -2,12 +2,12 @@ package exportoptionsgenerator
 
 import (
 	"fmt"
+	"slices"
 
-	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/go-utils/v2/log"
-	"github.com/bitrise-io/go-xcode/export"
 	"github.com/bitrise-io/go-xcode/exportoptions"
 	"github.com/bitrise-io/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/v2/exportoptionsgenerator/internal/codesigngroup"
 	"github.com/bitrise-io/go-xcode/v2/plistutil"
 	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 )
@@ -128,7 +128,7 @@ func (g ExportOptionsGenerator) GenerateApplicationExportOptions(
 
 // determineCodesignGroup finds the best codesign group (certificate + profiles)
 // based on the installed Provisioning Profiles and Codesign Certificates.
-func (g ExportOptionsGenerator) determineCodesignGroup(bundleIDEntitlementsMap map[string]plistutil.PlistData, exportMethod exportoptions.Method, teamID string, xcodeManaged bool) (*export.IosCodeSignGroup, error) {
+func (g ExportOptionsGenerator) determineCodesignGroup(bundleIDEntitlementsMap map[string]plistutil.PlistData, exportMethod exportoptions.Method, teamID string, xcodeManaged bool) (*codesigngroup.Ios, error) {
 	certs, err := g.certificateProvider.ListCodesignIdentities()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installed certificates: %w", err)
@@ -188,7 +188,7 @@ func projectUsesCloudKit(bundleIDEntitlementsMap map[string]plistutil.PlistData)
 			continue
 		}
 
-		if sliceutil.IsStringInSlice("CloudKit", services) || sliceutil.IsStringInSlice("CloudDocuments", services) {
+		if slices.Contains(services, "CloudKit") || slices.Contains(services, "CloudDocuments") {
 			fmt.Printf("Project uses CloudKit")
 
 			return true
@@ -268,7 +268,7 @@ func addTestFlightInternalTestingOnly(exportOpts exportoptions.ExportOptions, te
 	return exportOpts
 }
 
-func addManualSigningFields(exportOpts exportoptions.ExportOptions, codeSignGroup *export.IosCodeSignGroup, archivedWithXcodeManagedProfiles bool, logger log.Logger) exportoptions.ExportOptions {
+func addManualSigningFields(exportOpts exportoptions.ExportOptions, codeSignGroup *codesigngroup.Ios, archivedWithXcodeManagedProfiles bool, logger log.Logger) exportoptions.ExportOptions {
 	exportCodeSignStyle := ""
 	exportProfileMapping := map[string]string{}
 
