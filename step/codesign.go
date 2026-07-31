@@ -9,6 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/certdownloader"
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/codesignasset"
@@ -18,6 +19,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
 	"github.com/bitrise-io/go-xcode/v2/devportalservice"
+	"github.com/bitrise-io/go-xcode/v2/profileutil"
 )
 
 type CodesignManagerOpts struct {
@@ -124,6 +126,8 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		testDevices = serviceConnection.TestDevices
 	}
 
+	profileReader := profileutil.NewProfileReader(logger, fileManager, pathutil.NewPathModifier(), pathutil.NewPathProvider())
+
 	return codesign.NewManagerWithProject(
 		opts,
 		appleAuthCredentials,
@@ -131,7 +135,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		devPortalClientFactory,
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, logger),
 		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, logger),
-		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, int64(xcodeMajorVersion)),
+		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, profileReader, xcodeMajorVersion),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		localcodesignasset.NewProvisioningProfileConverter(),
 		project,
