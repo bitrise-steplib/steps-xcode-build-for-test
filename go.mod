@@ -1,6 +1,6 @@
 module github.com/bitrise-steplib/steps-xcode-build-for-test
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/bitrise-io/go-steputils v1.0.6
@@ -8,7 +8,7 @@ require (
 	github.com/bitrise-io/go-xcode v1.3.3
 	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.81
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
 
 require (
@@ -29,7 +29,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
 )
@@ -48,7 +48,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
