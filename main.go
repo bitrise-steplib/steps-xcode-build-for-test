@@ -13,6 +13,7 @@ import (
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
+	"github.com/bitrise-io/go-xcode/v2/profileutil"
 	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
 	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
@@ -58,7 +59,9 @@ func run() int {
 }
 
 func createConfigParser(logger log.Logger) step.ConfigParser {
-	return step.NewConfigParser(logger)
+	profileReader := profileutil.NewProfileReader(logger, fileutil.NewFileManager(), pathutil.NewPathModifier(), pathutil.NewPathProvider())
+
+	return step.NewConfigParser(logger, profileReader)
 }
 
 func createXcodebuildBuilder(logger log.Logger, logFormatter string, envRepository env.Repository) (step.XcodebuildBuilder, error) {
@@ -87,7 +90,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string, envReposito
 		xcodeCommandRunner = xcodecommand.NewXcbeautifyRunner(logger, runnerCmdFactory)
 	case step.XcprettyTool:
 		commandLocator := env.NewCommandLocator()
-		rubyCommandFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator)
+		rubyCommandFactory, err := ruby.NewCommandFactory(cmdFactory, commandLocator, logger)
 		if err != nil {
 			return step.XcodebuildBuilder{}, fmt.Errorf("failed to install xcpretty: %s", err)
 		}

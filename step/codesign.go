@@ -18,6 +18,7 @@ import (
 	"github.com/bitrise-io/go-xcode/v2/autocodesign/projectmanager"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
 	"github.com/bitrise-io/go-xcode/v2/devportalservice"
+	"github.com/bitrise-io/go-xcode/v2/profileutil"
 )
 
 type CodesignManagerOpts struct {
@@ -43,7 +44,7 @@ type CodesignManagerOpts struct {
 	APIKeyEnterpriseAccount      bool
 }
 
-func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager, envRepository env.Repository) (codesign.Manager, error) {
+func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion int64, logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager, profileReader profileutil.ProfileReader, envRepository env.Repository) (codesign.Manager, error) {
 	var authType codesign.AuthType
 	switch managerOpts.CodeSigningAuthSource {
 	case codeSignSourceAppleID:
@@ -131,7 +132,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		devPortalClientFactory,
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, logger),
 		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, logger),
-		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, int64(xcodeMajorVersion)),
+		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, profileReader, int64(xcodeMajorVersion)),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		localcodesignasset.NewProvisioningProfileConverter(),
 		project,

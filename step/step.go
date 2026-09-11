@@ -23,6 +23,7 @@ import (
 	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/v2/codesign"
+	"github.com/bitrise-io/go-xcode/v2/profileutil"
 	"github.com/bitrise-io/go-xcode/v2/xcconfig"
 	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
 	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
@@ -151,14 +152,17 @@ func NewXcodebuildBuilder(
 }
 
 type ConfigParser struct {
-	logger v2log.Logger
+	logger        v2log.Logger
+	profileReader profileutil.ProfileReader
 }
 
 func NewConfigParser(
 	logger v2log.Logger,
+	profileReader profileutil.ProfileReader,
 ) ConfigParser {
 	return ConfigParser{
-		logger: logger,
+		logger:        logger,
+		profileReader: profileReader,
 	}
 }
 
@@ -249,7 +253,7 @@ func (c ConfigParser) ProcessConfig(envRepository env.Repository) (Config, error
 			APIKeyID:                     input.APIKeyID,
 			APIKeyIssuerID:               input.APIKeyIssuerID,
 			APIKeyEnterpriseAccount:      input.APIKeyEnterpriseAccount,
-		}, xcodebuildVersion.MajorVersion, c.logger, factory, fileManager, envRepository)
+		}, xcodebuildVersion.MajorVersion, c.logger, factory, fileManager, c.profileReader, envRepository)
 		if err != nil {
 			return Config{}, err
 		}
