@@ -14,7 +14,6 @@ import (
 	"github.com/bitrise-io/go-steputils/tools"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/log"
-	v1pathutil "github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/v2/command"
 	v2command "github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
@@ -154,15 +153,18 @@ func NewXcodebuildBuilder(
 type ConfigParser struct {
 	logger        v2log.Logger
 	profileReader profileutil.ProfileReader
+	pathChecker   pathutil.PathChecker
 }
 
 func NewConfigParser(
 	logger v2log.Logger,
 	profileReader profileutil.ProfileReader,
+	pathChecker pathutil.PathChecker,
 ) ConfigParser {
 	return ConfigParser{
 		logger:        logger,
 		profileReader: profileReader,
+		pathChecker:   pathChecker,
 	}
 }
 
@@ -189,7 +191,7 @@ func (c ConfigParser) ProcessConfig(envRepository env.Repository) (Config, error
 		return Config{}, fmt.Errorf("failed to expand output dir (%s): %w", input.OutputDir, err)
 	}
 
-	if exist, err := v1pathutil.IsPathExists(absOutputDir); err != nil {
+	if exist, err := c.pathChecker.IsPathExists(absOutputDir); err != nil {
 		return Config{}, fmt.Errorf("failed to check if output dir exist: %w", err)
 	} else if !exist {
 		if err := os.MkdirAll(absOutputDir, 0777); err != nil {

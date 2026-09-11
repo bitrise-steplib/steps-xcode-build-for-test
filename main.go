@@ -61,7 +61,7 @@ func run() int {
 func createConfigParser(logger log.Logger) step.ConfigParser {
 	profileReader := profileutil.NewProfileReader(logger, fileutil.NewFileManager(), pathutil.NewPathModifier(), pathutil.NewPathProvider())
 
-	return step.NewConfigParser(logger, profileReader)
+	return step.NewConfigParser(logger, profileReader, pathutil.NewPathChecker())
 }
 
 func createXcodebuildBuilder(logger log.Logger, logFormatter string, envRepository env.Repository) (step.XcodebuildBuilder, error) {
