@@ -3,7 +3,7 @@ module github.com/bitrise-steplib/steps-xcode-build-for-test
 go 1.24.0
 
 require (
-	github.com/bitrise-io/go-steputils v1.0.6
+	github.com/bitrise-io/go-steputils v1.0.6 // indirect
 	github.com/bitrise-io/go-utils v1.0.15
 	github.com/bitrise-io/go-xcode v1.3.3
 	github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.85

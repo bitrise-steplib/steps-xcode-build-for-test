@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/bitrise-io/bitrise-build-cache-cli/v2/pkg/reactnative/wrap"
+	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-steputils/v2/ruby"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
@@ -112,7 +113,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string, envReposito
 		step.NewFileManager(),
 		logger,
 		cmdFactory,
-		envRepository,
+		export.NewDefaultExporter(cmdFactory),
 	), nil
 }
 
