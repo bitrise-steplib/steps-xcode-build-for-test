@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/mocks"
@@ -111,7 +112,6 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 	xcodeVersionReader := new(mocks.XCVersionReader)
 	pathProvider := new(mocks.PathProvider)
 	cmdFactory := new(mocks.CommandFactory)
-	envRepository := new(mocks.Repository)
 
 	step := NewXcodebuildBuilder(
 		xcodeCommandRunner,
@@ -124,7 +124,7 @@ func createStepAndMocks() (XcodebuildBuilder, testingMocks) {
 		fileManager,
 		logger,
 		cmdFactory,
-		envRepository,
+		export.NewDefaultExporter(cmdFactory),
 	)
 
 	mocks := testingMocks{
