@@ -6,8 +6,8 @@ github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10 h1:/2OyBFI7GjY
 github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10/go.mod h1:pARutiL3kEuRLV3JvswidvfCj+9Y3qMZtji2BDqLFsA=
 github.com/bitrise-io/go-steputils v1.0.6 h1:eBRL70DWwEd7DWYGd5Ds7OSIY5HElzhoDOI6UuITKQg=
 github.com/bitrise-io/go-steputils v1.0.6/go.mod h1:YIUaQnIAyK4pCvQG0hYHVkSzKNT9uL2FWmkFNW4mfNI=
-github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.54 h1:0dGR82r6ru+9Dyw6JSwjOyx7/n28cVm34XtMrIBlnkU=
-github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.54/go.mod h1:XrqiAQ3NY/T3gC50n7jCthpkYF8o9zDtwPDqy59pbKo=
+github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.55 h1:2uIzduj07CWbNp02y4EPDJF0zD1vJDZPTV4F2p9ikNU=
+github.com/bitrise-io/go-steputils/v2 v2.0.0-alpha.55/go.mod h1:XrqiAQ3NY/T3gC50n7jCthpkYF8o9zDtwPDqy59pbKo=
 github.com/bitrise-io/go-utils v1.0.1/go.mod h1:ZY1DI+fEpZuFpO9szgDeICM4QbqoWVt0RSY3tRI1heY=
 github.com/bitrise-io/go-utils v1.0.15 h1:KRQjNiPrkxBRM6G5fQy05v0p0r8wycWfKVb+Ko+Vtg0=
 github.com/bitrise-io/go-utils v1.0.15/go.mod h1:ZY1DI+fEpZuFpO9szgDeICM4QbqoWVt0RSY3tRI1heY=
@@ -15,8 +15,8 @@ github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.39 h1:QbWclC8fOI9rho//WXZFXmcbho+
 github.com/bitrise-io/go-utils/v2 v2.0.0-alpha.39/go.mod h1:5Z/vkUZ2BIY7IAVlMGns3ypRjd+J872YBSCJaLWVo/U=
 github.com/bitrise-io/go-xcode v1.3.3 h1:aYkSMWP+1/n2ZabRy3OMfeaWmE4l1gAPq63azx06LIw=
 github.com/bitrise-io/go-xcode v1.3.3/go.mod h1:9OwsvrhZ4A2JxHVoEY7CPcABAKA+OE7FQqFfBfvbFuY=
-github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.85 h1:gTVyRqO278hRErI8KKwTB86Kb++6GeoTSE8Gwu1cCKk=
-github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.85/go.mod h1:QicNtmRb2JncpvTGx4q9CMGkI/ddOaYRcKVAl8TQphA=
+github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.88 h1:8CwzBfvAJDLrZ7DVwIgIHjlaVVlYhgAPWIU1/D/JaJU=
+github.com/bitrise-io/go-xcode/v2 v2.0.0-alpha.88/go.mod h1:GTjR7PIX0nz2WEcadKKLoO252XSL8MFsnjymg8yuCMg=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
