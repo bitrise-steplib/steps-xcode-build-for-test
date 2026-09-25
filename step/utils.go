@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bitrise-io/go-utils/colorstring"
-	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/log/colorstring"
+	"github.com/bitrise-io/go-utils/v2/stringutil"
 )
 
 type FileManager interface {

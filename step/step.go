@@ -10,13 +10,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bitrise-io/go-steputils/output"
-	"github.com/bitrise-io/go-steputils/tools"
+	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/log"
-	v1pathutil "github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/v2/command"
-	v2command "github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	v2log "github.com/bitrise-io/go-utils/v2/log"
@@ -120,7 +117,7 @@ type XcodebuildBuilder struct {
 	fileManager        FileManager
 	logger             v2log.Logger
 	cmdFactory         command.Factory
-	envRepostiory      env.Repository
+	exporter           export.Exporter
 }
 
 func NewXcodebuildBuilder(
@@ -134,7 +131,7 @@ func NewXcodebuildBuilder(
 	fileManager FileManager,
 	logger v2log.Logger,
 	cmdFactory command.Factory,
-	envRepository env.Repository,
+	exporter export.Exporter,
 ) XcodebuildBuilder {
 	return XcodebuildBuilder{
 		xcodeCommandRunner: xcodeCommandRunner,
@@ -147,22 +144,25 @@ func NewXcodebuildBuilder(
 		fileManager:        fileManager,
 		logger:             logger,
 		cmdFactory:         cmdFactory,
-		envRepostiory:      envRepository,
+		exporter:           exporter,
 	}
 }
 
 type ConfigParser struct {
 	logger        v2log.Logger
 	profileReader profileutil.ProfileReader
+	pathChecker   pathutil.PathChecker
 }
 
 func NewConfigParser(
 	logger v2log.Logger,
 	profileReader profileutil.ProfileReader,
+	pathChecker pathutil.PathChecker,
 ) ConfigParser {
 	return ConfigParser{
 		logger:        logger,
 		profileReader: profileReader,
+		pathChecker:   pathChecker,
 	}
 }
 
@@ -189,7 +189,7 @@ func (c ConfigParser) ProcessConfig(envRepository env.Repository) (Config, error
 		return Config{}, fmt.Errorf("failed to expand output dir (%s): %w", input.OutputDir, err)
 	}
 
-	if exist, err := v1pathutil.IsPathExists(absOutputDir); err != nil {
+	if exist, err := c.pathChecker.IsPathExists(absOutputDir); err != nil {
 		return Config{}, fmt.Errorf("failed to check if output dir exist: %w", err)
 	} else if !exist {
 		if err := os.MkdirAll(absOutputDir, 0777); err != nil {
@@ -229,7 +229,7 @@ func (c ConfigParser) ProcessConfig(envRepository env.Repository) (Config, error
 
 	var codesignManager *codesign.Manager
 	if input.CodeSigningAuthSource != codeSignSourceOff {
-		factory := v2command.NewFactory(envRepository)
+		factory := command.NewFactory(envRepository)
 		fileManager := fileutil.NewFileManager()
 
 		codesignMgr, err := createCodesignManager(CodesignManagerOpts{
@@ -569,7 +569,7 @@ func (b XcodebuildBuilder) fixTestRoot(xctestrunPth string) error {
 
 func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) error {
 	xcodebuildLogPath := filepath.Join(outputDir, xcodebuildLogBaseName)
-	if err := output.ExportOutputFileContent(xcodebuildLog, xcodebuildLogPath, xcodebuildLogPathEnvKey); err != nil {
+	if err := b.exporter.ExportStringToFileOutput(xcodebuildLogPathEnvKey, xcodebuildLog, xcodebuildLogPath); err != nil {
 		return fmt.Errorf("failed to export %s, error: %w", xcodebuildLogPathEnvKey, err)
 	}
 	b.logger.Donef("The xcodebuild command log file path is available in %s env: %s", xcodebuildLogPathEnvKey, xcodebuildLogPath)
@@ -578,7 +578,7 @@ func (b XcodebuildBuilder) exportXcodebuildLog(outputDir, xcodebuildLog string) 
 
 func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel int, symroot string, xctestrunPths []string, defaultXctestrunPth string) error {
 	// BITRISE_TEST_BUNDLE_PATH
-	if err := tools.ExportEnvironmentWithEnvman(testBundlePathEnvKey, symroot); err != nil {
+	if err := b.exporter.ExportOutput(testBundlePathEnvKey, symroot); err != nil {
 		return err
 	}
 	b.logger.Donef("The test bundle directory is available in %s env: %s", testBundlePathEnvKey, symroot)
@@ -607,8 +607,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 		args = append(args, filepath.Base(xctestrunPth))
 	}
 
-	factory := v2command.NewFactory(env.NewRepository())
-	zipCmd := factory.Create("zip", args, &v2command.Opts{
+	zipCmd := b.cmdFactory.Create("zip", args, &command.Opts{
 		Dir: symroot,
 	})
 	b.logger.Debugf("$ %s", zipCmd.PrintableCommandArgs())
@@ -619,7 +618,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 		}
 		return fmt.Errorf("%s failed: %w", zipCmd.PrintableCommandArgs(), err)
 	}
-	if err := output.ExportOutputFile(testBundleZipPth, testBundleZipPth, testBundleZipPathEnvKey); err != nil {
+	if err := b.exporter.ExportOutputFile(testBundleZipPathEnvKey, testBundleZipPth, testBundleZipPth); err != nil {
 		return err
 	}
 	b.logger.Donef("The zipped test bundle is available in %s env: %s", testBundleZipPathEnvKey, testBundleZipPth)
@@ -628,7 +627,7 @@ func (b XcodebuildBuilder) exportTestBundle(outputDir string, compressionLevel i
 	if len(xctestrunPths) > 1 {
 		b.logger.Warnf("Multiple xctestrun files generated, exporting %s under BITRISE_XCTESTRUN_FILE_PATH", defaultXctestrunPth)
 	}
-	if err := output.ExportOutputFile(defaultXctestrunPth, defaultXctestrunPth, xctestrunPathEnvKey); err != nil {
+	if err := b.exporter.ExportOutputFile(xctestrunPathEnvKey, defaultXctestrunPth, defaultXctestrunPth); err != nil {
 		return err
 	}
 	b.logger.Donef("The built xctestrun file is available in %s env: %s", xctestrunPathEnvKey, defaultXctestrunPth)

@@ -132,7 +132,7 @@ func createCodesignManager(managerOpts CodesignManagerOpts, xcodeMajorVersion in
 		devPortalClientFactory,
 		certdownloader.NewDownloader(codesignConfig.CertificatesAndPassphrases, logger),
 		profiledownloader.New(codesignConfig.FallbackProvisioningProfiles, logger),
-		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, profileReader, int64(xcodeMajorVersion)),
+		codesignasset.NewWriter(logger, codesignConfig.Keychain, fileManager, profileReader, xcodeMajorVersion),
 		localcodesignasset.NewManager(localcodesignasset.NewProvisioningProfileProvider(), localcodesignasset.NewProvisioningProfileConverter()),
 		localcodesignasset.NewProvisioningProfileConverter(),
 		project,
