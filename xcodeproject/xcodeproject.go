@@ -18,7 +18,7 @@ func NewXcodeProject(factory xcodeproject.Factory) XcodeProject {
 }
 
 func (p xcodeProject) Scheme(projectPath string, schemeName string) (*xcscheme.Scheme, error) {
-	scheme, err := p.factory.Scheme(projectPath, schemeName)
+	scheme, _, err := p.factory.Scheme(projectPath, schemeName)
 	if err != nil {
 		return nil, err
 	}
