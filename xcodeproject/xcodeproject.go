@@ -1,8 +1,8 @@
 package xcodeproject
 
 import (
-	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject/xcscheme"
 )
 
 type XcodeProject interface {
@@ -10,13 +10,17 @@ type XcodeProject interface {
 }
 
 type xcodeProject struct {
+	factory xcodeproject.Factory
 }
 
-func NewXcodeProject() XcodeProject {
-	return xcodeProject{}
+func NewXcodeProject(factory xcodeproject.Factory) XcodeProject {
+	return xcodeProject{factory: factory}
 }
 
 func (p xcodeProject) Scheme(projectPath string, schemeName string) (*xcscheme.Scheme, error) {
-	scheme, _, err := schemeint.Scheme(projectPath, schemeName)
-	return scheme, err
+	scheme, err := p.factory.Scheme(projectPath, schemeName)
+	if err != nil {
+		return nil, err
+	}
+	return &scheme, nil
 }

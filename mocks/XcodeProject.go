@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject/xcscheme"
 	mock "github.com/stretchr/testify/mock"
 )
 
