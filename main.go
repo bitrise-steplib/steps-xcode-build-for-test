@@ -14,8 +14,13 @@ import (
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
+	"github.com/bitrise-io/go-xcode/v2/plistutil"
 	"github.com/bitrise-io/go-xcode/v2/profileutil"
+	"github.com/bitrise-io/go-xcode/v2/xcodebuild"
 	"github.com/bitrise-io/go-xcode/v2/xcodecommand"
+	v2xcodeproject "github.com/bitrise-io/go-xcode/v2/xcodeproject"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject/xcodeproj"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject/xcworkspace"
 	"github.com/bitrise-io/go-xcode/v2/xcodeversion"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/step"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/xcodeproject"
@@ -73,7 +78,7 @@ func createXcodebuildBuilder(logger log.Logger, logFormatter string, envReposito
 	cmdFactory := command.NewFactory(envRepository)
 	xcodeVersionReader := xcodeversion.NewXcodeVersionProvider(cmdFactory)
 	xcodeCommandRunner := xcodecommand.Runner(nil)
-	xcproject := xcodeproject.NewXcodeProject()
+	xcproject := xcodeproject.NewXcodeProject(createContainerFactory(logger, cmdFactory, fileManager, pathModifier, pathProvider, pathChecker))
 
 	// Only the factory handed to the xcodecommand runner gets wrapped — codesign,
 	// project readers, and other cmdFactory consumers keep invoking binaries
@@ -123,4 +128,14 @@ func createExportOptions(config step.Config, result step.RunOut) step.ExportOpts
 		OutputDir:        config.OutputDir,
 		CompressionLevel: config.CompressionLevel,
 	}
+}
+
+func createContainerFactory(logger log.Logger, cmdFactory command.Factory, fileManager fileutil.FileManager, pathModifier pathutil.PathModifier, pathProvider pathutil.PathProvider, pathChecker pathutil.PathChecker) v2xcodeproject.Factory {
+	plistFileHandler := plistutil.NewFileHandler(fileManager)
+	buildSettings := xcodebuild.NewShowBuildSettingsProvider(cmdFactory, logger)
+	userProvider := xcodeproj.NewUserProvider()
+	projectFactory := xcodeproj.NewFactory(logger, buildSettings, fileManager, plistFileHandler, pathModifier, pathProvider, userProvider, xcodeproj.NewDirCreator())
+	workspaceFactory := xcworkspace.NewFactory(logger, buildSettings, fileManager, plistFileHandler, pathModifier, pathChecker, userProvider, projectFactory)
+
+	return v2xcodeproject.NewFactory(projectFactory, workspaceFactory)
 }

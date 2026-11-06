@@ -187,6 +187,45 @@ workflows:
     - bundle::cleanup_profiles: { }
     - bundle::run_step_test: { }
 
+  test_json_project_format:
+    description: Only Xcode 27.2 and newer can read a project in the JSON project.xcproj format.
+    steps:
+    - script:
+        title: Check if the current Xcode supports the JSON project format
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -e
+            version=$(xcodebuild -version | head -n 1 | awk '{print $2}')
+            if printf '27.2\n%s\n' "$version" | sort -V -C; then
+              envman add --key RUN_JSON_PROJECT_FORMAT_TEST --value true
+            else
+              echo "Xcode $version does not support the JSON project format, skipping"
+            fi
+    - bitrise-run:
+        run_if: |-
+          {{ enveq "RUN_JSON_PROJECT_FORMAT_TEST" "true" }}
+        inputs:
+        - workflow_id: utility_test_json_project_format
+        - bitrise_config_path: ./e2e/bitrise.yml
+
+  utility_test_json_project_format:
+    description: |
+      Tests API key based code signing on a project in the JSON project.xcproj format with
+      automatically managed signing, a UI test target and no shared scheme.
+    envs:
+    - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-json-xcproj.git
+    - SAMPLE_APP_BRANCH: bitfall-signing
+    - BITRISE_PROJECT_PATH: sample-apps-ios-json-xcproj.xcodeproj
+    - BITRISE_SCHEME: sample-apps-ios-json-xcproj
+    - DESTINATION: generic/platform=iOS
+    - CODE_SIGNING_METHOD: api-key
+    - CERTIFICATE_URL_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_URL_LIST
+    - CERTIFICATE_PASSPHRASE_LIST: $BITFALL_APPLE_APPLE_CERTIFICATE_PASSPHRASE_LIST
+    steps:
+    - bundle::cleanup_profiles: { }
+    - bundle::run_step_test: { }
+
   test_test_plan_enabled_project:
     steps:
     - script:

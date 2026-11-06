@@ -7,7 +7,7 @@ import (
 
 	"github.com/bitrise-io/go-steputils/v2/export"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
+	"github.com/bitrise-io/go-xcode/v2/xcodeproject/xcscheme"
 	"github.com/bitrise-steplib/steps-xcode-build-for-test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
