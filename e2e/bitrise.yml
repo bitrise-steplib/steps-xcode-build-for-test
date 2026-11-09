@@ -215,7 +215,7 @@ workflows:
       automatically managed signing, a UI test target and no shared scheme.
     envs:
     - SAMPLE_APP_URL: https://github.com/bitrise-io/sample-apps-ios-json-xcproj.git
-    - SAMPLE_APP_BRANCH: bitfall-signing
+    - SAMPLE_APP_BRANCH: main
     - BITRISE_PROJECT_PATH: sample-apps-ios-json-xcproj.xcodeproj
     - BITRISE_SCHEME: sample-apps-ios-json-xcproj
     - DESTINATION: generic/platform=iOS
